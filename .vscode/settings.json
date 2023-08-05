@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "stm32f7xx_ll_usart.h": "c",
+        "stm32f7xx_hal_def.h": "c"
+    }
+}
