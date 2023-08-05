@@ -44,6 +44,7 @@
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart6;
+DMA_HandleTypeDef hdma_usart1_tx;
 DMA_HandleTypeDef hdma_usart6_rx;
 
 /* Definitions for defaultTask */
@@ -292,6 +293,9 @@ static void MX_DMA_Init(void)
   /* DMA2_Stream1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+  /* DMA2_Stream7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream7_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream7_IRQn);
 
 }
 
@@ -337,22 +341,22 @@ static uint8_t tx_data[5];
 static char breakChar = 'X';
 static uint8_t g_rxDmx = 0;
 
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
-  if (huart == &huart6) {
-    /* If error code is framing - assume that we have a break. 
-     * Such that we can start the reception from the beginning. */
-    if ( huart->ErrorCode == HAL_UART_ERROR_FE) {
-      g_rxDmx = 1;
-    }
-  }
-}
+// void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
+//   if (huart == &huart6) {
+//     /* If error code is framing - assume that we have a break. 
+//      * Such that we can start the reception from the beginning. */
+//     if ( huart->ErrorCode == HAL_UART_ERROR_FE) {
+//       g_rxDmx = 1;
+//     }
+//   }
+// }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	memcpy(tx_data, g_data, 5);
-	HAL_UART_Transmit_IT(&huart1, &tx_data, 5);
-	// Enable uart receiver to detect break condition.
-	HAL_UART_Receive_DMA(&huart6, g_data, 6);
-}
+// void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+// 	memcpy(tx_data, g_data, 5);
+// 	HAL_UART_Transmit_IT(&huart1, &tx_data, 5);
+// 	// Enable uart receiver to detect break condition.
+// 	HAL_UART_Receive_DMA(&huart6, g_data, 6);
+// }
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -365,29 +369,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-
-  /* Enable Line break interrupt */
-//  if ( IS_UART_LIN_INSTANCE(huart6.Instance)) {
-//    LL_USART_EnableIT_LBD(huart6.Instance);
-//  }
-
-  /* Start reception of maximum size buffer, and wait for
-   * the break. If we do not enable reception then we will
-   * not receive a framing error. Use DMA RX mode as the
-   * HAL will automatically abort the xfer for us when the
-   * framing error occurs. */
-  HAL_UART_Receive_DMA(&huart6, g_data, 6);
+  DMX_Init(&huart6);
 
   /* Infinite loop */
-  HAL_StatusTypeDef stat = 0;
   for(;;)
   {
     HAL_GPIO_TogglePin(GPIOJ, LED1_Pin|LED3_Pin);
-    if (g_rxDmx) {
-      stat = HAL_UART_Receive_DMA(&huart6, g_data, 5);
-      g_rxDmx = 0;
-    }
-
+    DMX_Task(&huart1);
   }
   /* USER CODE END 5 */
 }
