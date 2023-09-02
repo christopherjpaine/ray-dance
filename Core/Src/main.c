@@ -476,6 +476,8 @@ void StartDefaultTask(void *argument)
   /* USER CODE BEGIN 5 */
   DMX_Init(&huart6);
 
+  AUDIO_Start();
+
   /* Infinite loop */
   for(;;)
   {

@@ -30,7 +30,7 @@
 void AUDIO_Start (void) {
 
     uint32_t sampleRate = 48000;
-    uint32_t bitRes = 16;  
+    uint32_t bitRes = 16;
     uint32_t unusedParam = 0;
     // Instead of using BSP - we use the BSP as a guide to then configure our own
     // setup using cube.
