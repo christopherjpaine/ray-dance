@@ -72,7 +72,7 @@
 /* #define HAL_WWDG_MODULE_ENABLED */
 /* #define HAL_PCD_MODULE_ENABLED */
 /* #define HAL_HCD_MODULE_ENABLED */
-/* #define HAL_DFSDM_MODULE_ENABLED */
+#define HAL_DFSDM_MODULE_ENABLED
 /* #define HAL_DSI_MODULE_ENABLED */
 /* #define HAL_JPEG_MODULE_ENABLED */
 /* #define HAL_MDIOS_MODULE_ENABLED */
@@ -177,7 +177,7 @@
 #define  USE_HAL_QSPI_REGISTER_CALLBACKS        0U /* QSPI register callback disabled      */
 #define  USE_HAL_RNG_REGISTER_CALLBACKS         0U /* RNG register callback disabled       */
 #define  USE_HAL_RTC_REGISTER_CALLBACKS         0U /* RTC register callback disabled       */
-#define  USE_HAL_SAI_REGISTER_CALLBACKS         1U /* SAI register callback enabled       */
+#define  USE_HAL_SAI_REGISTER_CALLBACKS         0U /* SAI register callback disabled       */
 #define  USE_HAL_SD_REGISTER_CALLBACKS          0U /* SD register callback disabled        */
 #define  USE_HAL_SMARTCARD_REGISTER_CALLBACKS   0U /* SMARTCARD register callback disabled */
 #define  USE_HAL_SDRAM_REGISTER_CALLBACKS       0U /* SDRAM register callback disabled     */
