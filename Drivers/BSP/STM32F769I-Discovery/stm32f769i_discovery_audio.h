@@ -273,6 +273,7 @@ void  BSP_AUDIO_OUT_MspDeInit(SAI_HandleTypeDef *hsai, void *Params);
 /** @defgroup STM32F769I_DISCOVERY_AUDIO_IN_Exported_Functions STM32F769I_DISCOVERY_AUDIO_IN Exported Functions
   * @{
   */
+uint8_t BSP_AUDIO_IN_OUT_Init(uint32_t AudioFreq);
 uint8_t BSP_AUDIO_IN_Init(uint32_t AudioFreq, uint32_t BitRes, uint32_t ChnlNbr);
 uint8_t BSP_AUDIO_IN_InitEx(uint16_t InputDevice, uint32_t AudioFreq, uint32_t BitRes, uint32_t ChnlNbr);
 uint8_t BSP_AUDIO_IN_AllocScratch (int32_t *pScratch, uint32_t size);
