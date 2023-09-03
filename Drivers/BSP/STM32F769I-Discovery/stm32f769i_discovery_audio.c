@@ -209,8 +209,14 @@ typedef struct
   */
 /* PLAY */
 AUDIO_DrvTypeDef                *audio_drv;
-SAI_HandleTypeDef               haudio_out_sai;
-SAI_HandleTypeDef               haudio_in_sai;
+// SAI_HandleTypeDef               haudio_out_sai;
+// SAI_HandleTypeDef               haudio_in_sai;
+extern SAI_HandleTypeDef hsai_BlockA1;
+extern SAI_HandleTypeDef hsai_BlockB1;
+
+#define haudio_out_sai hsai_BlockA1
+#define haudio_in_sai hsai_BlockB1
+
 
 /* RECORD */
 AUDIOIN_TypeDef                 hAudioIn;
@@ -235,7 +241,7 @@ static __IO int32_t             ScratchSize;
 /* Cannel number to be used: 2 channels by default */
 static uint8_t                  AudioIn_ChannelNumber = DEFAULT_AUDIO_IN_CHANNEL_NBR;
 /* Input device to be used: digital microphones by default */
-static uint16_t                 AudioIn_Device = INPUT_DEVICE_DIGITAL_MIC; 
+static uint16_t                 AudioIn_Device = INPUT_DEVICE_INPUT_LINE_1; 
 
 /* Buffers status flags */
 static uint32_t                DmaTopLeftRecHalfCplt  = 0;
@@ -262,8 +268,6 @@ static void SAIx_Out_Init(uint32_t AudioFreq);
 static void SAIx_Out_DeInit(void);
 static void SAI_AUDIO_IN_MspInit(SAI_HandleTypeDef *hsai, void *Params);
 static void SAI_AUDIO_IN_MspDeInit(SAI_HandleTypeDef *hsai, void *Params);
-static void SAIx_In_Init(uint32_t AudioFreq);
-static void SAIx_In_DeInit(void);
 static void    DFSDMx_ChannelMspInit(void);
 static void    DFSDMx_FilterMspInit(void);
 static void    DFSDMx_ChannelMspDeInit(void);
@@ -969,7 +973,7 @@ static void SAIx_Out_DeInit(void)
   *         and user can update this configuration using 
   * @retval None
   */
-static void SAIx_In_Init(uint32_t AudioFreq)
+void SAIx_In_Init(uint32_t AudioFreq)
 {
     /* Initialize SAI1 block A in MASTER TX */
     /* Initialize the haudio_out_sai Instance parameter */
@@ -1063,7 +1067,7 @@ static void SAIx_In_Init(uint32_t AudioFreq)
   * @brief  Deinitializes the output Audio Codec audio interface (SAI).
   * @retval None
   */
-static void SAIx_In_DeInit(void)
+void SAIx_In_DeInit(void)
 {
   /* Initialize the haudio_in_sai Instance parameter */
   haudio_in_sai.Instance = AUDIO_IN_SAIx;
@@ -1091,11 +1095,11 @@ uint8_t BSP_AUDIO_IN_OUT_Init(uint32_t AudioFreq)
     BSP_AUDIO_OUT_ClockConfig(&haudio_in_sai, AudioFreq, NULL);
     haudio_out_sai.Instance = AUDIO_OUT_SAIx;
     haudio_in_sai.Instance = AUDIO_IN_SAIx;
-    if (HAL_SAI_GetState(&haudio_in_sai) == HAL_SAI_STATE_RESET)
-    {
-        BSP_AUDIO_OUT_MspInit(&haudio_out_sai, NULL);
-        SAI_AUDIO_IN_MspInit(&haudio_in_sai, NULL);
-    }
+    // if (HAL_SAI_GetState(&haudio_in_sai) == HAL_SAI_STATE_RESET)
+    // {
+    //     BSP_AUDIO_OUT_MspInit(&haudio_out_sai, NULL);
+    //     SAI_AUDIO_IN_MspInit(&haudio_in_sai, NULL);
+    // }
 
 
     SAIx_In_Init(AudioFreq); // inclu déja le code de SAIx_Out_Init()
@@ -1126,7 +1130,7 @@ uint8_t BSP_AUDIO_IN_OUT_Init(uint32_t AudioFreq)
 uint8_t BSP_AUDIO_IN_OUT_Play(uint16_t* pBuffer, uint32_t Size)
 {
    /* Call the audio Codec Play function */
-   if (audio_drv->Play(AUDIO_I2C_ADDRESS, (uint16_t *)pBuffer, Size) != 0)
+   if (wm8994_drv.Play(AUDIO_I2C_ADDRESS, (uint16_t *)pBuffer, Size) != 0)
    {
        return AUDIO_ERROR;
    }
@@ -1187,35 +1191,35 @@ uint8_t BSP_AUDIO_IN_InitEx(uint16_t InputDevice, uint32_t AudioFreq, uint32_t B
     SAIx_In_DeInit();
     
     /* PLL clock is set depending by the AudioFreq (44.1khz vs 48khz groups) */ 
-    BSP_AUDIO_OUT_ClockConfig(&haudio_in_sai, AudioFreq, NULL);
+    // BSP_AUDIO_OUT_ClockConfig(&haudio_in_sai, AudioFreq, NULL);
     
-    haudio_in_sai.Instance = AUDIO_IN_SAIx;
-    if(HAL_SAI_GetState(&haudio_in_sai) == HAL_SAI_STATE_RESET)
-    {    
-    BSP_AUDIO_OUT_MspInit(&haudio_in_sai, NULL);
-    BSP_AUDIO_IN_MspInit();
-    }
+    // haudio_in_sai.Instance = AUDIO_IN_SAIx;
+    // if(HAL_SAI_GetState(&haudio_in_sai) == HAL_SAI_STATE_RESET)
+    // {    
+    // BSP_AUDIO_OUT_MspInit(&haudio_in_sai, NULL);
+    // BSP_AUDIO_IN_MspInit();
+    // }
 
     SAIx_In_Init(AudioFreq);
     
-    if((wm8994_drv.ReadID(AUDIO_I2C_ADDRESS)) == WM8994_ID)
-    {
-      /* Reset the Codec Registers */
-      wm8994_drv.Reset(AUDIO_I2C_ADDRESS);
-      /* Initialize the audio driver structure */
-      audio_drv = &wm8994_drv;
-      ret = AUDIO_OK;
-    }
-    else
-    {
-      ret = AUDIO_ERROR;
-    }
+    // if((wm8994_drv.ReadID(AUDIO_I2C_ADDRESS)) == WM8994_ID)
+    // {
+    //   /* Reset the Codec Registers */
+    //   wm8994_drv.Reset(AUDIO_I2C_ADDRESS);
+    //   /* Initialize the audio driver structure */
+    //   audio_drv = &wm8994_drv;
+    //   ret = AUDIO_OK;
+    // }
+    // else
+    // {
+    //   ret = AUDIO_ERROR;
+    // }
     
-    if(ret == AUDIO_OK)
-    {
-      /* Initialize the codec internal registers */
-      audio_drv->Init(AUDIO_I2C_ADDRESS, InputDevice, 100, AudioFreq);
-    }    
+    // if(ret == AUDIO_OK)
+    // {
+    //   /* Initialize the codec internal registers */
+    //   audio_drv->Init(AUDIO_I2C_ADDRESS, InputDevice, 100, AudioFreq);
+    // }    
   }
   
   /* Return AUDIO_OK when all operations are correctly done */

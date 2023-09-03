@@ -31,6 +31,9 @@
 #define AUDIO_BUFFER_CHANNELS	2
 #define AUDIO_BUFFER_LEN	AUDIO_BUFFER_SAMPLES * AUDIO_BUFFER_CHANNELS
 
+static void audio_Init( void );
+static void audio_InitCodec (uint32_t sampleRate, uint32_t volumePercent);
+
 static uint32_t count = 0;
 static int16_t inputBufferLR[AUDIO_BUFFER_LEN] = {0};
 static int16_t outputBufferLR[AUDIO_BUFFER_LEN] = {0};
@@ -51,9 +54,13 @@ void AUDIO_Start (void) {
     // Input is slave. It is a synchronous slave so we use the clock from the output.
     // DMA channels have been configured.
     // Next step is to literally add the buffers!
-    BSP_AUDIO_IN_InitEx(INPUT_DEVICE_ANALOG_MIC, sampleRate, bitRes, unusedParam);
 
-    BSP_AUDIO_IN_OUT_Init(sampleRate);
+    /* Working code: */
+//    BSP_AUDIO_IN_InitEx(INPUT_DEVICE_ANALOG_MIC, sampleRate, bitRes, unusedParam);
+//     BSP_AUDIO_IN_OUT_Init(sampleRate);
+
+    audio_Init();
+
     BSP_AUDIO_IN_OUT_Play(inputBufferLR, AUDIO_BUFFER_SAMPLES);
 
 
@@ -79,3 +86,78 @@ void    BSP_AUDIO_OUT_HalfTransfer_CallBack(void){
 	count--;
 }
 
+#if 1
+
+static void audio_Init( void ) {
+
+    uint32_t sampleRate = BSP_AUDIO_FREQUENCY_48K;
+
+    /* BSP_AUDIO_IN_InitEx() */
+
+    /* De-initialise both sai blocks. */
+    // SAIx_In_DeInit();   
+
+    /* Configure the PLL to generate the output clock. */
+    /* I beleive that this is already configured by our generated code. */
+    // this function doesn't actually use the handle. Just the frequency.
+    // BSP_AUDIO_OUT_ClockConfig(&haudio_in_sai, sampleRate, NULL);
+
+    /* Configure the output side pins. 
+     * Because we pass the in handle to this out function it does not actually
+     * set the DMA at all. */
+    // BSP_AUDIO_OUT_MspInit(&haudio_in_sai, NULL);
+
+    /* Configure the input side pins and dma. 
+     * Just calls directly to SAI_AUDIO_IN_MspInit(&haudio_in_sai, NULL); under the hood. 
+     * Which we will need to use if we have the handle stored in this scope. */
+    // probably all set up by our own configuration in the ioc
+    // BSP_AUDIO_IN_MspInit();
+
+    /* This sets up both the input and output blocks of the SAI such that 
+     * the output is master tx and the input is slave rx. */
+    // could be replaced by our own configuration?
+//    SAIx_In_Init(sampleRate);                                               // This is necessary for it to work?
+
+    /* Initialise the codec with full volume */
+    // audio_InitCodec(sampleRate, 100);
+
+    /* BSP_AUDIO_IN_OUT_Init() */
+
+    /* Disable SAI */
+//   SAIx_In_DeInit();                                                       // REPEAT
+
+    /* Initialise the PLL to generate the output clock */
+//    BSP_AUDIO_OUT_ClockConfig(&haudio_in_sai, sampleRate, NULL);             // REPEAT
+
+    /* Initialise the output pins and dma */
+    // BSP_AUDIO_OUT_MspInit(&haudio_out_sai, NULL);
+
+    /* As above in other function, call BSP_AUDIO_IN_MspInit but because it's
+     * the line in it just calls direct to sai init. */
+    // SAI_AUDIO_IN_MspInit(&haudio_in_sai, NULL);                             // REPEAT
+
+    /* As above - set up both the input and output blocks for I2S */
+    // SAIx_In_Init(sampleRate);                                                // REPEAT
+
+    /* Initialise the codec with full volume */
+    audio_InitCodec(sampleRate, 100);                                       // REPEAT
+
+}
+
+static void audio_InitCodec (uint32_t sampleRate, uint32_t volumePercent) {
+
+    /* Verify codec is there*/
+    if(wm8994_drv.ReadID(AUDIO_I2C_ADDRESS) != WM8994_ID){
+        __BKPT();
+        while(1);
+    }
+
+    /* Reset the Codec Registers */
+    wm8994_drv.Reset(AUDIO_I2C_ADDRESS);
+ 
+    /* Initialize the codec internal registers */
+    wm8994_drv.Init(AUDIO_I2C_ADDRESS, INPUT_DEVICE_INPUT_LINE_1 | OUTPUT_DEVICE_HEADPHONE, volumePercent, sampleRate);
+
+}
+
+#endif
