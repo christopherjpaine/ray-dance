@@ -996,8 +996,8 @@ static void SAIx_In_Init(uint32_t AudioFreq)
     haudio_out_sai.Init.Mckdiv         = 0;
 
     /* Configure SAI_Block_x Frame */
-    haudio_out_sai.FrameInit.FrameLength       = 64;
-    haudio_out_sai.FrameInit.ActiveFrameLength = 32;
+    haudio_out_sai.FrameInit.FrameLength       = 32;
+    haudio_out_sai.FrameInit.ActiveFrameLength = 16;
     haudio_out_sai.FrameInit.FSDefinition      = SAI_FS_CHANNEL_IDENTIFICATION;
     haudio_out_sai.FrameInit.FSPolarity        = SAI_FS_ACTIVE_LOW;
     haudio_out_sai.FrameInit.FSOffset          = SAI_FS_BEFOREFIRSTBIT;
@@ -1005,7 +1005,7 @@ static void SAIx_In_Init(uint32_t AudioFreq)
     /* Configure SAI Block_x Slot */
     haudio_out_sai.SlotInit.FirstBitOffset = 0;
     haudio_out_sai.SlotInit.SlotSize       = SAI_SLOTSIZE_DATASIZE;
-    haudio_out_sai.SlotInit.SlotNumber     = 4;
+    haudio_out_sai.SlotInit.SlotNumber     = 2;
     haudio_out_sai.SlotInit.SlotActive     = CODEC_AUDIOFRAME_SLOT_0123;
 
     HAL_SAI_Init(&haudio_out_sai);
@@ -1037,8 +1037,8 @@ static void SAIx_In_Init(uint32_t AudioFreq)
     haudio_in_sai.Init.Mckdiv         = 0;
 
     /* Configure SAI_Block_x Frame */
-    haudio_in_sai.FrameInit.FrameLength       = 64;
-    haudio_in_sai.FrameInit.ActiveFrameLength = 32;
+    haudio_in_sai.FrameInit.FrameLength       = 32;
+    haudio_in_sai.FrameInit.ActiveFrameLength = 16;
     haudio_in_sai.FrameInit.FSDefinition      = SAI_FS_CHANNEL_IDENTIFICATION;
     haudio_in_sai.FrameInit.FSPolarity        = SAI_FS_ACTIVE_LOW;
     haudio_in_sai.FrameInit.FSOffset          = SAI_FS_BEFOREFIRSTBIT;
@@ -1046,7 +1046,7 @@ static void SAIx_In_Init(uint32_t AudioFreq)
     /* Configure SAI Block_x Slot */
     haudio_in_sai.SlotInit.FirstBitOffset = 0;
     haudio_in_sai.SlotInit.SlotSize       = SAI_SLOTSIZE_DATASIZE;
-    haudio_in_sai.SlotInit.SlotNumber     = 4;
+    haudio_in_sai.SlotInit.SlotNumber     = 2;
     haudio_in_sai.SlotInit.SlotActive     = CODEC_AUDIOFRAME_SLOT_0123;
 
     HAL_SAI_Init(&haudio_in_sai);

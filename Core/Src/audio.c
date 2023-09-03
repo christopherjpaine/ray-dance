@@ -27,9 +27,17 @@
 #include "stm32f769i_discovery_audio.h"
 #include "stdint.h"
 
+#define AUDIO_BUFFER_SAMPLES	1024
+#define AUDIO_BUFFER_CHANNELS	2
+#define AUDIO_BUFFER_LEN	AUDIO_BUFFER_SAMPLES * AUDIO_BUFFER_CHANNELS
+
+static uint32_t count = 0;
+static int16_t inputBufferLR[AUDIO_BUFFER_LEN] = {0};
+static int16_t outputBufferLR[AUDIO_BUFFER_LEN] = {0};
+
 void AUDIO_Start (void) {
 
-    uint32_t sampleRate = 48000;
+    uint32_t sampleRate = BSP_AUDIO_FREQUENCY_48K;
     uint32_t bitRes = 16;
     uint32_t unusedParam = 0;
     // Instead of using BSP - we use the BSP as a guide to then configure our own
@@ -42,7 +50,32 @@ void AUDIO_Start (void) {
     // Output is master
     // Input is slave. It is a synchronous slave so we use the clock from the output.
     // DMA channels have been configured.
-    // Next step is to literally add the buffers! 
+    // Next step is to literally add the buffers!
     BSP_AUDIO_IN_InitEx(INPUT_DEVICE_ANALOG_MIC, sampleRate, bitRes, unusedParam);
+
+    BSP_AUDIO_IN_OUT_Init(sampleRate);
+    BSP_AUDIO_IN_OUT_Play(inputBufferLR, AUDIO_BUFFER_SAMPLES);
+
+
+    BSP_AUDIO_IN_Record(inputBufferLR, AUDIO_BUFFER_SAMPLES);
+}
+
+void    BSP_AUDIO_IN_TransferComplete_CallBack(void) {
+	count++;
+}
+void    BSP_AUDIO_IN_HalfTransfer_CallBack(void){
+	static uint8_t output = 0;
+	if (!output) {
+		//BSP_AUDIO_OUT_Play(inputBufferLR, AUDIO_BUFFER_SAMPLES);
+		output = 1;
+	}
+	count++;
+}
+
+void    BSP_AUDIO_OUT_TransferComplete_CallBack(void) {
+	count--;
+}
+void    BSP_AUDIO_OUT_HalfTransfer_CallBack(void){
+	count--;
 }
 
