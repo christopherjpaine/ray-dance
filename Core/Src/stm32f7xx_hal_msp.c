@@ -183,9 +183,11 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     __HAL_RCC_SPI2_CLK_ENABLE();
 
     __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOI_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     /**SPI2 GPIO Configuration
     PA12     ------> SPI2_SCK
+    PI2     ------> SPI2_MISO
     PB15     ------> SPI2_MOSI
     */
     GPIO_InitStruct.Pin = GPIO_PIN_12;
@@ -194,6 +196,13 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_2;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
+    HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
 
     GPIO_InitStruct.Pin = GPIO_PIN_15;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -213,7 +222,10 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     hdma_spi2_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
     hdma_spi2_tx.Init.Mode = DMA_NORMAL;
     hdma_spi2_tx.Init.Priority = DMA_PRIORITY_LOW;
-    hdma_spi2_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    hdma_spi2_tx.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+    hdma_spi2_tx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
+    hdma_spi2_tx.Init.MemBurst = DMA_MBURST_SINGLE;
+    hdma_spi2_tx.Init.PeriphBurst = DMA_PBURST_SINGLE;
     if (HAL_DMA_Init(&hdma_spi2_tx) != HAL_OK)
     {
       Error_Handler();
@@ -246,9 +258,12 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
 
     /**SPI2 GPIO Configuration
     PA12     ------> SPI2_SCK
+    PI2     ------> SPI2_MISO
     PB15     ------> SPI2_MOSI
     */
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_12);
+
+    HAL_GPIO_DeInit(GPIOI, GPIO_PIN_2);
 
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_15);
 
