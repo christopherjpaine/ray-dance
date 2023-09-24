@@ -555,7 +555,7 @@ void StartDefaultTask(void *argument)
   for(;;)
   {
     HAL_GPIO_TogglePin(GPIOJ, LED1_Pin|LED3_Pin);
-    DMX_Task(&huart1, &huart5);
+    DMX_Task(&huart5);
   }
   /* USER CODE END 5 */
 }

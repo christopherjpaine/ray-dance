@@ -96,10 +96,9 @@ void DMX_Init (UART_HandleTypeDef* huart) {
 }
 
 /* DMX Task */
-void DMX_Task (UART_HandleTypeDef* output_huart, UART_HandleTypeDef* output_huart2) {
+void DMX_Task (UART_HandleTypeDef* output_huart) {
     if (dmx_data_ready) {
     	dmx_data_ready = 0;
         HAL_UART_Transmit_DMA(output_huart, dmx_data, DMX_BYTES_TO_RX);
-        HAL_UART_Transmit_DMA(output_huart2, dmx_data, DMX_BYTES_TO_RX);
     }
 }
