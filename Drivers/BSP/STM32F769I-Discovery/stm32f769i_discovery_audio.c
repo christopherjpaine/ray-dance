@@ -1089,7 +1089,7 @@ uint8_t BSP_AUDIO_IN_OUT_Init(uint32_t AudioFreq)
     uint8_t ret = AUDIO_ERROR;
 
     /* Disable SAI */
-    SAIx_In_DeInit();
+    // SAIx_In_DeInit();
 
     /* PLL clock is set depending by the AudioFreq (44.1khz vs 48khz groups) */
     // BSP_AUDIO_OUT_ClockConfig(&haudio_in_sai, AudioFreq, NULL);
@@ -1102,7 +1102,9 @@ uint8_t BSP_AUDIO_IN_OUT_Init(uint32_t AudioFreq)
     // }
 
 
-    SAIx_In_Init(AudioFreq); // inclu déja le code de SAIx_Out_Init()
+    // SAIx_In_Init(AudioFreq); // inclu déja le code de SAIx_Out_Init()
+
+    __HAL_SAI_ENABLE(&haudio_out_sai);
 
 
     if ((wm8994_drv.ReadID(AUDIO_I2C_ADDRESS)) == WM8994_ID)
