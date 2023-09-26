@@ -1092,9 +1092,9 @@ uint8_t BSP_AUDIO_IN_OUT_Init(uint32_t AudioFreq)
     SAIx_In_DeInit();
 
     /* PLL clock is set depending by the AudioFreq (44.1khz vs 48khz groups) */
-    BSP_AUDIO_OUT_ClockConfig(&haudio_in_sai, AudioFreq, NULL);
-    haudio_out_sai.Instance = AUDIO_OUT_SAIx;
-    haudio_in_sai.Instance = AUDIO_IN_SAIx;
+    // BSP_AUDIO_OUT_ClockConfig(&haudio_in_sai, AudioFreq, NULL);
+    // haudio_out_sai.Instance = AUDIO_OUT_SAIx;
+    // haudio_in_sai.Instance = AUDIO_IN_SAIx;
     // if (HAL_SAI_GetState(&haudio_in_sai) == HAL_SAI_STATE_RESET)
     // {
     //     BSP_AUDIO_OUT_MspInit(&haudio_out_sai, NULL);
