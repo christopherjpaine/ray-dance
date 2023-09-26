@@ -39,57 +39,52 @@ static uint8_t dmx_buffer[DMX_MAX_RX_BUFFER_SIZE] = {0};
 static uint8_t dmx_data[DMX_BYTES_TO_RX] = {0};
 
 /* RX Complete Interrupt 
- * This will occur when we have received the number of bytes that care about
- * in the DMX frame. Copy them and notify the task. */
+ * This will occur when we have received a full frame of DMX data. 
+ * (Or a buffer of the same size) */
 static void dmx_RxCompleteCallback (UART_HandleTypeDef* huart) {
-    /* If we are in the RX State */
-    if ( dmx_state == dmx_STATE_RX ) {
-        /* Store Received Data and signal task to print it. */
-        dmx_data_ready = 1;
-        /* Move to Unsynced and Enable Receiver to detect next BREAK */
-        dmx_state = dmx_STATE_UNSYNC;
-        memcpy(dmx_data, dmx_buffer, DMX_BYTES_TO_RX);
-        HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE);
-    /* If we are not synced, then just re-enable the receiver. This will 
-     * happen if we are being given data outside of DMX framing. */
-    } else if (dmx_state == dmx_STATE_UNSYNC) {
-        HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE);
-    } else {
-        __asm("nop");
+    HAL_StatusTypeDef s = HAL_OK;
+
+    switch (dmx_state) {
+        case dmx_STATE_RESET:
+            /* This should not be possible as the transfer hasn't started.
+             * We just ignore it. */
+            return;
+
+        case dmx_STATE_RX:
+            /* We received a full frame. Copy the data, mark it as ready,
+             * move the unsynced state and start a new xfer. Any data rx
+             * between now and the frame sync will be discarded. Usually
+             * there is nothing but it could cause a problem. */
+            memcpy(dmx_data, dmx_buffer, DMX_BYTES_TO_RX);
+            dmx_data_ready = 1;
+            s = HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE);
+            if (HAL_OK != s) {
+                dmx_state = dmx_STATE_FAILED;
+            }
+            return;
+        
+        case dmx_STATE_UNSYNC:
+            /* If we receive DMX_MAX_BYTES without getting a sync then
+             * it's probably not DMX data so we can discard it and start a 
+             * fresh xfer instead. */
+            s = HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE);
+            if (HAL_OK != s) {
+                dmx_state = dmx_STATE_FAILED;
+            }
+            return;
+
+        case dmx_STATE_FAILED:
+            /* Catch with breakpoint but not expected to happen. */
+            __BKPT();
+            return;
     }
 }
 
 /* Framing Error Interrupt 
  * This should be called when the DMX USART detects a break condition.
- * It assumes that any existing transfer has been aborted.
- * It will notify the task to begin receiving a new DMX frame.
-//  */
-// static void dmx_ErrorCallback (UART_HandleTypeDef* huart) {
-// 	/* If we are in the reset state, we received a error before the rx was
-// 	 * even set up... Ignore it. */
-// 	if (dmx_state == dmx_STATE_RESET) {
-// 		dmx_errors = 1;
-// 		return;
-// 	}
-//     /* If the error is a framing error */
-//     if ( huart->ErrorCode & HAL_UART_ERROR_FE ) {
-//         /* If we are unsynced, move into the receive state and start 
-//          * the receiver. If we are in the receive state, then we got a framing 
-//          * error before we expected, so just restart the receiver. */
-//         if ( dmx_state == dmx_STATE_UNSYNC || dmx_state == dmx_STATE_RX ) {
-//             dmx_state = dmx_STATE_RX;
-//             if (HAL_OK != HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE)) {
-//             	__NOP();
-//             }
-//             return;
-//         }
-//     }
-// 	if (huart->ErrorCode) {
-// 		__BKPT();
-// 		dmx_state = dmx_STATE_FAILED;
-// 	}
-// }
-
+ * It assumes that any existing transfer has been aborted and due to the
+ * oddities of ST HAL, this will only work if you disable overrun errors.
+ * It will notify the task to begin receiving a new DMX frame. */
 static void dmx_ErrorCallback (UART_HandleTypeDef* huart) {
     HAL_StatusTypeDef s = HAL_OK;
 
