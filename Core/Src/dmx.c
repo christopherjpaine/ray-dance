@@ -120,7 +120,7 @@ void DMX_Init (UART_HandleTypeDef* huart) {
 /* DMX Task */
 void DMX_Task (UART_HandleTypeDef* output_huart) {
 	if (dmx_state == dmx_STATE_FAILED) {
-		_BKPT();
+		__BKPT();
 	}
     if (dmx_data_ready) {
     	dmx_data_ready = 0;
