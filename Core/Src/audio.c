@@ -57,7 +57,7 @@ void AUDIO_Start (void) {
 
     /* Working code: */
 //    BSP_AUDIO_IN_InitEx(INPUT_DEVICE_ANALOG_MIC, sampleRate, bitRes, unusedParam);
-//     BSP_AUDIO_IN_OUT_Init(sampleRate);
+    BSP_AUDIO_IN_OUT_Init(sampleRate);
 
     audio_Init();
 
