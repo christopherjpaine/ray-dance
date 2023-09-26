@@ -53,19 +53,24 @@ void AUDIO_Start (SAI_HandleTypeDef* audio_in_sai, SAI_HandleTypeDef* audio_out_
 
     /* End of init - onto start */
 
-    /* Call the audio Codec Play function - The interface says it needs buffer 
-     * And size, this is not the case. */
+    /* Unmute the Audio CODEC 
+     * Note that the API says it needs buffer and size, this is not the case
+     * so we send NULL and 0. */
     if (wm8994_drv.Play(AUDIO_I2C_ADDRESS, NULL, 0) != 0)
     {
         __BKPT();
     }
-    /* Update the Media layer and enable it for play */
+
+    /* Begin Transmitting on the Output SAI. This is used for debug purposes
+     * really, makes it easy to verify audio is being rx'd correctly. And
+     * gives you a usable audio output if you need it. */
     HAL_StatusTypeDef s = HAL_SAI_Transmit_DMA(audio_out_sai, inputBufferLR, AUDIO_BUFFER_SAMPLES);
     if (HAL_OK != s) {
         __BKPT();
     }
 
-    /* Start the process receive DMA */
+    /* Start receiving on the Input SAI. We will then drive the audio task
+     * from the interrupts of this peripheral. */
     s = HAL_SAI_Receive_DMA(audio_in_sai, inputBufferLR, AUDIO_BUFFER_SAMPLES);
     if(HAL_OK != s) {
         __BKPT();
@@ -83,13 +88,6 @@ void    BSP_AUDIO_IN_HalfTransfer_CallBack(void){
 		output = 1;
 	}
 	count++;
-}
-
-void    BSP_AUDIO_OUT_TransferComplete_CallBack(void) {
-	count--;
-}
-void    BSP_AUDIO_OUT_HalfTransfer_CallBack(void){
-	count--;
 }
 
 #if 1
