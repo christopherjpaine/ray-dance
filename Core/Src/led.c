@@ -4,6 +4,18 @@
 #include <string.h>
 #include <stdbool.h>
 
+#define PIXEL_DEBUG
+
+#if defined PIXEL_DEBUG
+typedef struct PixelDebug_s {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} PixelDebug;
+
+static PixelDebug pixel_buffer[LED_NUM_LEDS] = {0};
+#endif
+
 uint8_t byte_buffer[LED_BUFFER_SIZE_BYTES];
 bool led_busy = false;
 
@@ -35,6 +47,12 @@ void LED_Init(void) {
 // }
 
 static inline void set_pixel(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b) {
+
+    #if defined PIXEL_DEBUG
+        pixel_buffer[pixel].r = r;
+        pixel_buffer[pixel].g = g;
+        pixel_buffer[pixel].b = b;
+    #endif
     uint16_t pixel_pos = (24 * pixel) + LED_RESET_PULSE_BYTES;
     uint8_t* ptr_g = &byte_buffer[pixel_pos];
     uint8_t* ptr_r = &byte_buffer[pixel_pos+8];
