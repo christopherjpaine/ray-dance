@@ -24,6 +24,8 @@
 /* USER CODE BEGIN Includes */
 #include "stm32f7xx_ll_usart.h"
 #include "dmx.h"
+#include "audio.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -606,7 +608,8 @@ void StartDefaultTask(void *argument)
   LED_Init();
   DMX_Init(&huart6, update_led_callback);
 
-  AUDIO_Start();
+  /* Start audio - in block, out block */
+  AUDIO_Start(&hsai_BlockB1, &hsai_BlockA1);
   
   /* Infinite loop */
   for(;;)
