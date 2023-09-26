@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32f7xx_ll_usart.h"
+#include "dmx.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -585,6 +586,11 @@ static uint8_t g_rxDmx = 0;
 // 	// Enable uart receiver to detect break condition.
 // 	HAL_UART_Receive_DMA(&huart6, g_data, 6);
 // }
+
+static void update_led_callback(DMX_Data* data) {
+    LED_SetAll(data->red, data->green, data->blue);
+    LED_Sync();
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -599,7 +605,7 @@ void StartDefaultTask(void *argument)
   /* USER CODE BEGIN 5 */
 
   LED_Init();
-  DMX_Init(&huart6, NULL);
+  DMX_Init(&huart6, update_led_callback);
 
   // AUDIO_Start();
   

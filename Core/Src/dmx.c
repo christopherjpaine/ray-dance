@@ -7,12 +7,15 @@
 
 #include "led.h"
 
+#include <string.h>
+#include <stdlib.h>
+
 /* == DEFINES ============================================================== */
 #define DMX_MAX_RX_BUFFER_SIZE  513
 
 #define DMX_CHANNEL_START   0
 
-#define DMX_NUM_CHANNELS    6
+#define DMX_NUM_CHANNELS    3
 
 #define DMX_CHANNEL_END     DMX_CHANNEL_START + DMX_NUM_CHANNELS
 
@@ -41,6 +44,8 @@ static uint8_t dmx_data_ready = 0;
 static uint8_t dmx_buffer[DMX_MAX_RX_BUFFER_SIZE] = {0};
 
 static uint8_t dmx_data[DMX_BYTES_TO_RX] = {0};
+
+static void (*dmx_data_ready_callback) (DMX_Data*) = NULL; 
 
 static osThreadId_t dmx_task_handle = NULL;
 
@@ -174,10 +179,31 @@ static void dmx_task(void* params) {
             case dmx_STATE_UNSYNC:
             case dmx_STATE_RX:
                 if (dmx_data_ready) {
-                    dmx_data[4] = '\n';
-                    dmx_debug_log(dmx_data, 5);
-                    LED_SetAll(dmx_data[1], dmx_data[2], dmx_data[3]);
-                    LED_Sync();
+                    /* Get pointer to start of relevant data (we might not 
+                     * be receving from channel 0)*/
+                    void* data_ptr = &dmx_data[DMX_CHANNEL_START];
+
+                    /* Run callback if enabled - Interface level data type 
+                     * should be byte-wise equivalent of raw data. */
+                    if (dmx_data_ready_callback) {
+                        dmx_data_ready_callback((DMX_Data*)data_ptr);
+                    }
+
+                    /* Create our debug string - We just print chars directly
+                     * very quick and dirty. */
+					#define DEBUG_STRING_SIZE (5 + (DMX_NUM_CHANNELS*4))
+                    static char debug_string[DEBUG_STRING_SIZE] = "dmx: ";
+                    char * debug_string_ptr = debug_string + 5;
+                    memset(debug_string_ptr, ' ', DEBUG_STRING_SIZE-5);
+                    for (int i = 0; i < DMX_NUM_CHANNELS; i++) {
+                    	char* temp[4] = {0};
+                        itoa(((uint8_t*)data_ptr)[i], temp, 10);
+                        memcpy(&debug_string_ptr[i*4], temp, strlen(temp));
+                        debug_string_ptr[(i*4)+3] = ',';
+                    }
+                    debug_string[DEBUG_STRING_SIZE-1] = '\n';
+                    dmx_debug_log(debug_string, (DEBUG_STRING_SIZE));
+
                 }
         }
     }
@@ -193,6 +219,7 @@ void DMX_Init (UART_HandleTypeDef* huart, void(*data_ready_callback)(DMX_Data*))
 	dmx_uart = huart;
 	dmx_state = dmx_STATE_RESET;
     dmx_data_ready = 0;
+    dmx_data_ready_callback = data_ready_callback;
 
     /* Register our internal callbacks */
     dmx_RegisterCallbacks(huart);
