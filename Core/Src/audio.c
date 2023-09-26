@@ -38,31 +38,20 @@ static uint32_t count = 0;
 static int16_t inputBufferLR[AUDIO_BUFFER_LEN] = {0};
 static int16_t outputBufferLR[AUDIO_BUFFER_LEN] = {0};
 
-void AUDIO_Start (void) {
+void AUDIO_Start (SAI_HandleTypeDef* audio_in_sai, SAI_HandleTypeDef* audio_out_sai) {
 
     uint32_t sampleRate = BSP_AUDIO_FREQUENCY_48K;
     uint32_t bitRes = 16;
     uint32_t unusedParam = 0;
-    // Instead of using BSP - we use the BSP as a guide to then configure our own
-    // setup using cube.
-    // Clocks and ouput SAI have been configured to handle 48kHz audio.
-    // Clock is 49MHz though.. how do we configure the adc for that...
-    // MCKDIV is configured in the SAI HAL :) 
-    // Config from bsp is becoming verified and being transferred into ioc.
 
-    // Output is master
-    // Input is slave. It is a synchronous slave so we use the clock from the output.
-    // DMA channels have been configured.
-    // Next step is to literally add the buffers!
+    /* TODO Hardware Init that is currently handled by cube mx IOC. */
 
-    /* Working code: */
-//    BSP_AUDIO_IN_InitEx(INPUT_DEVICE_ANALOG_MIC, sampleRate, bitRes, unusedParam);
-    BSP_AUDIO_IN_OUT_Init(sampleRate);
+    /* Start the SAI Output Block to generate MCLK */
+    __HAL_SAI_ENABLE(audio_out_sai);
 
     audio_Init();
 
     BSP_AUDIO_IN_OUT_Play(inputBufferLR, AUDIO_BUFFER_SAMPLES);
-
 
     BSP_AUDIO_IN_Record(inputBufferLR, AUDIO_BUFFER_SAMPLES);
 }
