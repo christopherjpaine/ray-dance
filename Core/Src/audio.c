@@ -51,7 +51,20 @@ void AUDIO_Start (SAI_HandleTypeDef* audio_in_sai, SAI_HandleTypeDef* audio_out_
 
     audio_Init();
 
-    BSP_AUDIO_IN_OUT_Play(inputBufferLR, AUDIO_BUFFER_SAMPLES);
+    /* End of init - onto start */
+
+    // BSP_AUDIO_IN_OUT_Play(inputBufferLR, AUDIO_BUFFER_SAMPLES);
+    /* Call the audio Codec Play function - The interface says it needs buffer 
+     * And size, this is not the case. */
+    if (wm8994_drv.Play(AUDIO_I2C_ADDRESS, NULL, 0) != 0)
+    {
+        __BKPT();
+    }
+    /* Update the Media layer and enable it for play */
+    HAL_StatusTypeDef s = HAL_SAI_Transmit_DMA(audio_out_sai, inputBufferLR, AUDIO_BUFFER_SAMPLES);
+    if (HAL_OK != s) {
+        __BKPT();
+    }
 
     BSP_AUDIO_IN_Record(inputBufferLR, AUDIO_BUFFER_SAMPLES);
 }
