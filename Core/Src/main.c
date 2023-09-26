@@ -597,18 +597,17 @@ static uint8_t g_rxDmx = 0;
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-  DMX_Init(&huart6);
+
+  LED_Init();
+  DMX_Init(&huart6, NULL);
 
   // AUDIO_Start();
-
-   LED_Init();
   
   /* Infinite loop */
   for(;;)
   {
     HAL_GPIO_TogglePin(GPIOJ, LED1_Pin|LED3_Pin);
-    DMX_Task(&huart5);
-//    LED_Sync();
+    osDelay(200);
   }
   /* USER CODE END 5 */
 }
