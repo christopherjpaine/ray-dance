@@ -977,42 +977,42 @@ void SAIx_In_Init(uint32_t AudioFreq)
 {
     /* Initialize SAI1 block A in MASTER TX */
     /* Initialize the haudio_out_sai Instance parameter */
-    haudio_out_sai.Instance = AUDIO_OUT_SAIx;
+    // haudio_out_sai.Instance = AUDIO_OUT_SAIx;
 
-    /* Disable SAI peripheral to allow access to SAI internal registers */
-    __HAL_SAI_DISABLE(&haudio_out_sai);
+    // /* Disable SAI peripheral to allow access to SAI internal registers */
+    // __HAL_SAI_DISABLE(&haudio_out_sai);
 
-    /* Configure SAI_Block_x */
-    haudio_out_sai.Init.MonoStereoMode = SAI_STEREOMODE;
-    haudio_out_sai.Init.AudioFrequency = AudioFreq;
-    haudio_out_sai.Init.AudioMode      = SAI_MODEMASTER_TX;
-    haudio_out_sai.Init.NoDivider      = SAI_MASTERDIVIDER_ENABLE;
-    haudio_out_sai.Init.Protocol       = SAI_FREE_PROTOCOL;
-    haudio_out_sai.Init.DataSize       = SAI_DATASIZE_16;
-    haudio_out_sai.Init.FirstBit       = SAI_FIRSTBIT_MSB;
-    haudio_out_sai.Init.ClockStrobing  = SAI_CLOCKSTROBING_FALLINGEDGE;
-    haudio_out_sai.Init.Synchro        = SAI_ASYNCHRONOUS;
-    haudio_out_sai.Init.OutputDrive    = SAI_OUTPUTDRIVE_ENABLE;
-    haudio_out_sai.Init.FIFOThreshold  = SAI_FIFOTHRESHOLD_1QF;
-    haudio_out_sai.Init.SynchroExt     = SAI_SYNCEXT_DISABLE;
-    haudio_out_sai.Init.CompandingMode = SAI_NOCOMPANDING;
-    haudio_out_sai.Init.TriState       = SAI_OUTPUT_NOTRELEASED;
-    haudio_out_sai.Init.Mckdiv         = 0;
+    // /* Configure SAI_Block_x */
+    // haudio_out_sai.Init.MonoStereoMode = SAI_STEREOMODE;
+    // haudio_out_sai.Init.AudioFrequency = AudioFreq;
+    // haudio_out_sai.Init.AudioMode      = SAI_MODEMASTER_TX;
+    // haudio_out_sai.Init.NoDivider      = SAI_MASTERDIVIDER_ENABLE;
+    // haudio_out_sai.Init.Protocol       = SAI_FREE_PROTOCOL;
+    // haudio_out_sai.Init.DataSize       = SAI_DATASIZE_16;
+    // haudio_out_sai.Init.FirstBit       = SAI_FIRSTBIT_MSB;
+    // haudio_out_sai.Init.ClockStrobing  = SAI_CLOCKSTROBING_FALLINGEDGE;
+    // haudio_out_sai.Init.Synchro        = SAI_ASYNCHRONOUS;
+    // haudio_out_sai.Init.OutputDrive    = SAI_OUTPUTDRIVE_ENABLE;
+    // haudio_out_sai.Init.FIFOThreshold  = SAI_FIFOTHRESHOLD_1QF;
+    // haudio_out_sai.Init.SynchroExt     = SAI_SYNCEXT_DISABLE;
+    // haudio_out_sai.Init.CompandingMode = SAI_NOCOMPANDING;
+    // haudio_out_sai.Init.TriState       = SAI_OUTPUT_NOTRELEASED;
+    // haudio_out_sai.Init.Mckdiv         = 0;
 
-    /* Configure SAI_Block_x Frame */
-    haudio_out_sai.FrameInit.FrameLength       = 32;
-    haudio_out_sai.FrameInit.ActiveFrameLength = 16;
-    haudio_out_sai.FrameInit.FSDefinition      = SAI_FS_CHANNEL_IDENTIFICATION;
-    haudio_out_sai.FrameInit.FSPolarity        = SAI_FS_ACTIVE_LOW;
-    haudio_out_sai.FrameInit.FSOffset          = SAI_FS_BEFOREFIRSTBIT;
+    // /* Configure SAI_Block_x Frame */
+    // haudio_out_sai.FrameInit.FrameLength       = 32;
+    // haudio_out_sai.FrameInit.ActiveFrameLength = 16;
+    // haudio_out_sai.FrameInit.FSDefinition      = SAI_FS_CHANNEL_IDENTIFICATION;
+    // haudio_out_sai.FrameInit.FSPolarity        = SAI_FS_ACTIVE_LOW;
+    // haudio_out_sai.FrameInit.FSOffset          = SAI_FS_BEFOREFIRSTBIT;
 
-    /* Configure SAI Block_x Slot */
-    haudio_out_sai.SlotInit.FirstBitOffset = 0;
-    haudio_out_sai.SlotInit.SlotSize       = SAI_SLOTSIZE_DATASIZE;
-    haudio_out_sai.SlotInit.SlotNumber     = 2;
-    haudio_out_sai.SlotInit.SlotActive     = CODEC_AUDIOFRAME_SLOT_0123;
+    // /* Configure SAI Block_x Slot */
+    // haudio_out_sai.SlotInit.FirstBitOffset = 0;
+    // haudio_out_sai.SlotInit.SlotSize       = SAI_SLOTSIZE_DATASIZE;
+    // haudio_out_sai.SlotInit.SlotNumber     = 2;
+    // haudio_out_sai.SlotInit.SlotActive     = CODEC_AUDIOFRAME_SLOT_0123;
 
-    HAL_SAI_Init(&haudio_out_sai);
+    // HAL_SAI_Init(&haudio_out_sai);
 
 
 
@@ -1076,7 +1076,7 @@ void SAIx_In_DeInit(void)
   // __HAL_SAI_DISABLE(&haudio_in_sai);
 
   // HAL_SAI_DeInit(&haudio_in_sai);
-  HAL_SAI_DeInit(&haudio_out_sai);
+  // HAL_SAI_DeInit(&haudio_out_sai);
 }
 
 /**
