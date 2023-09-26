@@ -7,7 +7,7 @@
 
 #define DMX_CHANNEL_START   0
 
-#define DMX_NUM_CHANNELS    51
+#define DMX_NUM_CHANNELS    6
 
 #define DMX_CHANNEL_END     DMX_CHANNEL_START + DMX_NUM_CHANNELS
 
@@ -63,30 +63,84 @@ static void dmx_RxCompleteCallback (UART_HandleTypeDef* huart) {
  * This should be called when the DMX USART detects a break condition.
  * It assumes that any existing transfer has been aborted.
  * It will notify the task to begin receiving a new DMX frame.
- */
+//  */
+// static void dmx_ErrorCallback (UART_HandleTypeDef* huart) {
+// 	/* If we are in the reset state, we received a error before the rx was
+// 	 * even set up... Ignore it. */
+// 	if (dmx_state == dmx_STATE_RESET) {
+// 		dmx_errors = 1;
+// 		return;
+// 	}
+//     /* If the error is a framing error */
+//     if ( huart->ErrorCode & HAL_UART_ERROR_FE ) {
+//         /* If we are unsynced, move into the receive state and start 
+//          * the receiver. If we are in the receive state, then we got a framing 
+//          * error before we expected, so just restart the receiver. */
+//         if ( dmx_state == dmx_STATE_UNSYNC || dmx_state == dmx_STATE_RX ) {
+//             dmx_state = dmx_STATE_RX;
+//             if (HAL_OK != HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE)) {
+//             	__NOP();
+//             }
+//             return;
+//         }
+//     }
+// 	if (huart->ErrorCode) {
+// 		__BKPT();
+// 		dmx_state = dmx_STATE_FAILED;
+// 	}
+// }
+
 static void dmx_ErrorCallback (UART_HandleTypeDef* huart) {
-	/* If we are in the reset state, we received a error before the rx was
-	 * even set up... Ignore it. */
-	if (dmx_state == dmx_STATE_RESET) {
-		dmx_errors = 1;
-		return;
-	}
-    /* If the error is a framing error */
-    if ( huart->ErrorCode & HAL_UART_ERROR_FE ) {
-        /* If we are unsynced, move into the receive state and start 
-         * the receiver. If we are in the receive state, then we got a framing 
-         * error before we expected, so just restart the receiver. */
-        if ( dmx_state == dmx_STATE_UNSYNC || dmx_state == dmx_STATE_RX ) {
-            dmx_state = dmx_STATE_RX;
-            if (HAL_OK != HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE)) {
-            	__NOP();
+    HAL_StatusTypeDef s = HAL_OK;
+
+    switch (dmx_state) {
+        case dmx_STATE_RESET:
+            /* We have not finished initialising yet so ignore this interrupt.
+             * Unfortunately we have to do this, and disable OVR error because
+             * the ST HAL doesn't really cope with this case. */
+            return;
+
+        case dmx_STATE_UNSYNC:
+            /* We are unsynced, awating a framing error to start reception. 
+             * Regardless of the error we should always start a new transfer.
+             * But we only move to the RX state if the frame error is set. 
+             * We do this in quite a "tolerant" way by ignoring all other errors
+             * if FE is set. */
+            if ( huart->ErrorCode & HAL_UART_ERROR_FE ) {
+                dmx_state = dmx_STATE_RX;
+            }
+            s = HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE);
+            if (HAL_OK != s) {
+                dmx_state = dmx_STATE_FAILED;
             }
             return;
-        }
+        
+        case dmx_STATE_RX:
+            /* We did not receive a full frame of data. If it was due to framing 
+             * error EXCLUSIVELY then we can assume that it was just a short 
+             * frame. In that case, copy the data and mark it as ready. If it 
+             * was due to a different error then move to unsync. In both cases 
+             * start a new xfer. */
+            if ( (huart->ErrorCode & HAL_UART_ERROR_FE) == HAL_UART_ERROR_FE) {   
+                /* If any data hasn't been rx'd then it will just remain as it 
+                 * was previously in dmx_buffer. */
+                memcpy(dmx_data, dmx_buffer, DMX_BYTES_TO_RX);
+                dmx_data_ready = 1;
+            } else {
+                dmx_state = dmx_STATE_UNSYNC;
+            }
+            s = HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE);
+            if (HAL_OK != s) {
+                dmx_state = dmx_STATE_FAILED;
+            }
+            return;
+
+        case dmx_STATE_FAILED:
+            /* In the case we failed to init a transfer, we would need to re-init
+             * right now just panic. */
+            __BKPT();
+            return;
     }
-	if (huart->ErrorCode) {
-		dmx_state = dmx_STATE_FAILED;
-	}
 }
 
 static void dmx_RegisterCallbacks(UART_HandleTypeDef* huart) {
