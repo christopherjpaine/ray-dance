@@ -15,7 +15,7 @@
 
 #define DMX_CHANNEL_START   0
 
-#define DMX_NUM_CHANNELS    3
+#define DMX_NUM_CHANNELS    10
 
 #define DMX_CHANNEL_END     DMX_CHANNEL_START + DMX_NUM_CHANNELS
 
@@ -55,6 +55,10 @@ static osThreadId_t dmx_task_handle = NULL;
 static void dmx_RxCompleteCallback (UART_HandleTypeDef* huart) {
     HAL_StatusTypeDef s = HAL_OK;
 
+    /* Debug the case of under-reading */
+    if (dmx_data_ready) {
+        __BKPT();
+    }
     switch (dmx_state) {
         case dmx_STATE_RESET:
             /* This should not be possible as the transfer hasn't started.
@@ -179,6 +183,9 @@ static void dmx_task(void* params) {
             case dmx_STATE_UNSYNC:
             case dmx_STATE_RX:
                 if (dmx_data_ready) {
+                    /* Reset data ready */
+                    dmx_data_ready = 0;
+
                     /* Get pointer to start of relevant data (we might not 
                      * be receving from channel 0)*/
                     void* data_ptr = &dmx_data[DMX_CHANNEL_START];
@@ -203,8 +210,8 @@ static void dmx_task(void* params) {
                     }
                     debug_string[DEBUG_STRING_SIZE-1] = '\n';
                     dmx_debug_log(debug_string, (DEBUG_STRING_SIZE));
-
                 }
+                continue;
         }
     }
 }
