@@ -1,6 +1,11 @@
 
 /* == INCLUDES ============================================================= */
+#include "dmx.h"
+
 #include "stm32f7xx_hal.h"
+#include "cmsis_os.h"
+
+#include "led.h"
 
 /* == DEFINES ============================================================== */
 #define DMX_MAX_RX_BUFFER_SIZE  513
@@ -13,6 +18,7 @@
 
 /* bytes to read = channels needed + 1 start byte. */
 #define DMX_BYTES_TO_RX   DMX_CHANNEL_END + 1
+
 
 /* == TYPES ================================================================ */
 typedef enum dmx_State_etag {
@@ -35,6 +41,8 @@ static uint8_t dmx_data_ready = 0;
 static uint8_t dmx_buffer[DMX_MAX_RX_BUFFER_SIZE] = {0};
 
 static uint8_t dmx_data[DMX_BYTES_TO_RX] = {0};
+
+static osThreadId_t dmx_task_handle = NULL;
 
 /* RX Complete Interrupt 
  * This will occur when we have received a full frame of DMX data. 
@@ -142,17 +150,63 @@ static void dmx_RegisterCallbacks(UART_HandleTypeDef* huart) {
     status = HAL_UART_RegisterCallback(huart, HAL_UART_ERROR_CB_ID, dmx_ErrorCallback);
 }
 
+static void dmx_debug_log(char* str, uint8_t len) {
+    #if defined DMX_DEBUG_UART
+        HAL_UART_Transmit_DMA(&DMX_DEBUG_UART, str, len);
+    #endif
+}
+
+static void dmx_task(void* params) {
+    (void) params;
+    
+
+    for (;;) {
+        osDelay(10);
+        switch (dmx_state) {
+            case dmx_STATE_RESET:
+                continue;
+
+            case dmx_STATE_FAILED:
+                static char dmx_failed_str[10] = "dmx: fail\n";
+                dmx_debug_log(dmx_failed_str, 10);
+                continue;
+
+            case dmx_STATE_UNSYNC:
+            case dmx_STATE_RX:
+                if (dmx_data_ready) {
+                    dmx_data[4] = '\n';
+                    dmx_debug_log(dmx_data, 5);
+                    LED_SetAll(dmx_data[1], dmx_data[2], dmx_data[3]);
+                    LED_Sync();
+                }
+        }
+    }
+}
+
 /* DMX Init 
  * Currently assumes both config and GPIO mapping have been taken care 
  * of by cube mx generater. 
  * TODO handle this internally or with a compilation flag. */
-void DMX_Init (UART_HandleTypeDef* huart) {
+void DMX_Init (UART_HandleTypeDef* huart, void(*data_ready_callback)(DMX_Data*)) {
 
+    /* file static vars*/
 	dmx_uart = huart;
 	dmx_state = dmx_STATE_RESET;
-    // TODO hardware init
+    dmx_data_ready = 0;
 
+    /* Register our internal callbacks */
     dmx_RegisterCallbacks(huart);
+    
+    /* We should also do the hardware initialisation here but we rely on 
+     * cube mx to generate it at the moment. */
+
+    /* Create a task to receive and publish the data. */
+    osThreadAttr_t thread_params = {
+        .name = "dmx",
+        .stack_size = 128 * 4,
+        .priority = (osPriority_t) osPriorityNormal,
+    };
+    dmx_task_handle = osThreadNew(dmx_task, NULL, &thread_params);
 
     /* We always start unsynced so just enable the receiver. This will mean
      * that a framing error is generated on the next BREAK condition and we
@@ -160,20 +214,4 @@ void DMX_Init (UART_HandleTypeDef* huart) {
     HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE);
     dmx_state = dmx_STATE_UNSYNC;
 
-}
-
-#include "led.h"
-
-/* DMX Task */
-void DMX_Task (UART_HandleTypeDef* output_huart) {
-	if (dmx_state == dmx_STATE_FAILED) {
-		__BKPT();
-	}
-    if (dmx_data_ready) {
-    	dmx_data_ready = 0;
-        dmx_data[4] = '\n';
-        HAL_UART_Transmit_DMA(output_huart, dmx_data, 5);
-        LED_SetAll(dmx_data[1], dmx_data[2], dmx_data[3]);
-        LED_Sync();
-    }
 }
