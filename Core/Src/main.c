@@ -478,7 +478,8 @@ static void MX_USART6_UART_Init(void)
   huart6.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart6.Init.OverSampling = UART_OVERSAMPLING_16;
   huart6.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart6.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_DMADISABLEONERROR_INIT;
+  huart6.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_RXOVERRUNDISABLE_INIT|UART_ADVFEATURE_DMADISABLEONERROR_INIT;
+  huart6.AdvancedInit.OverrunDisable = UART_ADVFEATURE_OVERRUN_DISABLE;
   huart6.AdvancedInit.DMADisableonRxError = UART_ADVFEATURE_DMA_DISABLEONRXERROR;
   if (HAL_UART_Init(&huart6) != HAL_OK)
   {
@@ -598,16 +599,16 @@ void StartDefaultTask(void *argument)
   /* USER CODE BEGIN 5 */
   DMX_Init(&huart6);
 
-  AUDIO_Start();
+  // AUDIO_Start();
 
-  LED_Init();
+   LED_Init();
   
   /* Infinite loop */
   for(;;)
   {
     HAL_GPIO_TogglePin(GPIOJ, LED1_Pin|LED3_Pin);
     DMX_Task(&huart5);
-    LED_Sync();
+//    LED_Sync();
   }
   /* USER CODE END 5 */
 }
