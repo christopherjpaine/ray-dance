@@ -29,8 +29,6 @@ static dmx_State_e dmx_state = dmx_STATE_UNSYNC;
 
 UART_HandleTypeDef* dmx_uart;
 
-static uint8_t dmx_errors = 0;
-
 // Data ready flag
 static uint8_t dmx_data_ready = 0;
 
@@ -173,9 +171,6 @@ void DMX_Task (UART_HandleTypeDef* output_huart) {
 	}
     if (dmx_data_ready) {
     	dmx_data_ready = 0;
-    	if (dmx_errors) {
-			dmx_data[0] = 'e';
-		}
         dmx_data[4] = '\n';
         HAL_UART_Transmit_DMA(output_huart, dmx_data, 5);
         LED_SetAll(dmx_data[1], dmx_data[2], dmx_data[3]);
