@@ -14,8 +14,13 @@
 
 /* == CONFIGURATION ======================================================== */
 
-#define AUDIO_BUFFER_SAMPLES_PER_CHANNEL	1024
+#define AUDIO_BUFFER_SAMPLES_PER_CHANNEL	1024U
 #define AUDIO_BUFFER_CHANNELS	2
+
+/* FFT Size 
+ * This should be greater than the audio samples per channel such that we get
+ * a decent amount of padding. However it must align to a power of 2. */
+#define AUDIO_FFT_SIZE 2048U
 
 /* == DEFINES ============================================================== */
 
@@ -30,10 +35,8 @@
  * buffers are equal. */
 #define AUDIO_BUFFER_RAW_MEMORY	AUDIO_BUFFER_SIZE * 2
 
-/* Audio FFT Size 
- * Simplest is to be equal to number of samples in a buffer. But if we want 
- * to be more accurate we should be zero padding and windowing. */
-#define AUDIO_FFT_SIZE      AUDIO_BUFFER_SAMPLES_PER_CHANNEL
+/* FFT Padding */
+#define AUDIO_FFT_PADDING   (AUDIO_FFT_SIZE - AUDIO_BUFFER_SAMPLES_PER_CHANNEL)
 
 /* Audio FFT Bins 
  * Number of bins is half that of the fft size */
@@ -232,11 +235,11 @@ static void audio_InitCodec (uint32_t sampleRate, uint32_t volumePercent) {
 /* Mono-ized audio data in q15 format */
 static int16_t audio_m_q15[AUDIO_BUFFER_SAMPLES_PER_CHANNEL];
 /* Mono-ized audio data in f32 format */
-static float audio_m_f32[AUDIO_BUFFER_SAMPLES_PER_CHANNEL];
+static float audio_m_f32_padded[AUDIO_FFT_SIZE] = {0.0f};
 /* Interleaved real/imag fft result data */
-static float audio_fft_f32[AUDIO_FFT_SIZE];
+static float audio_fft_f32[AUDIO_FFT_SIZE] = {0.0f};
 /* Magntiude of fft */
-static float audio_mag_f32[AUDIO_FFT_SIZE/2];
+static float audio_mag_f32[AUDIO_FFT_SIZE/2] = {0.0f};
 
 /* audio_lr - buffer of interleaved audio samples. */
 static void audio_Algorithm (int16_t *audio_lr) {
@@ -248,12 +251,15 @@ static void audio_Algorithm (int16_t *audio_lr) {
         audio_m_q15[i] = sample_l_q14 + sample_r_q14;
     }
 
-    /* Convert to float */
+    /* Convert to float and place in padded array, reset the padding to zero
+     * as the cmsis fft function messes with it. */
+    memset(audio_m_f32_padded, 0, AUDIO_FFT_PADDING*sizeof(float));
+    float* audio_m_f32 = &audio_m_f32_padded[AUDIO_FFT_PADDING];
     arm_q15_to_float(audio_m_q15, audio_m_f32, AUDIO_BUFFER_SAMPLES_PER_CHANNEL);
 
     /* Run fft */
     uint8_t inverse_fft_flag = 0;
-    arm_rfft_fast_f32(&audio_fft_instance, audio_m_f32, audio_fft_f32, inverse_fft_flag);
+    arm_rfft_fast_f32(&audio_fft_instance, audio_m_f32_padded, audio_fft_f32, inverse_fft_flag);
 
     /* Compute magnitude and scale
      * Due to the way that cmsis-dsp packs the output buffer the first bin is 
@@ -289,16 +295,16 @@ static void audio_DebugResults (float *mag_f32) {
     debug_count = debug_count_max;
 
     /* static debug buffers */
-    static const uint32_t num_mag = AUDIO_BUFFER_SAMPLES_PER_CHANNEL/2;
-    static const uint16_t debug_str_len = (AUDIO_BUFFER_SAMPLES_PER_CHANNEL/2)*4;
-    static char debug_str[(AUDIO_BUFFER_SAMPLES_PER_CHANNEL/2)*4];
+    #define AUDIO_DEBUG_NUMBER_OF_BINS  128
+    static const uint16_t debug_str_len = (AUDIO_DEBUG_NUMBER_OF_BINS/2)*4;
+    static char debug_str[(AUDIO_DEBUG_NUMBER_OF_BINS/2)*4];
 
     /* Start with empty space */
     memset(debug_str, ' ', debug_str_len);
     
     /* For each value, multiply by 1000 then convert to int, this should give
      * up to 3 sig figs for each. Then convert and add into the string.*/
-    for (int i = 0; i < num_mag; i++) {
+    for (int i = 0; i < AUDIO_DEBUG_NUMBER_OF_BINS; i++) {
         int temp_int = (int)(mag_f32[i] * 1000.0f);
         char* temp_str[4] = {0};
         itoa(temp_int, temp_str, 10);
