@@ -11,4 +11,6 @@ extern UART_HandleTypeDef AUDIO_DEBUG_UART;
 
 /* == INTERFACE FUNCTIONS ================================================== */
 
-void AUDIO_Start (SAI_HandleTypeDef* audio_in_sai, SAI_HandleTypeDef* audio_out_sai);
+void AUDIO_Init(SAI_HandleTypeDef* input_sai, SAI_HandleTypeDef* output_sai);
+
+void AUDIO_Start (void);

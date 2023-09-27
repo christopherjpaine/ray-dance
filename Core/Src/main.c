@@ -161,6 +161,10 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
+  
+  /* Init audio */
+  AUDIO_Init(&hsai_BlockB1, &hsai_BlockA1);
+
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
@@ -608,8 +612,7 @@ void StartDefaultTask(void *argument)
   LED_Init();
   DMX_Init(&huart6, update_led_callback);
 
-  /* Start audio - in block, out block */
-  AUDIO_Start(&hsai_BlockB1, &hsai_BlockA1);
+  AUDIO_Start();
   
   /* Infinite loop */
   for(;;)
