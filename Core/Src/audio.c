@@ -31,27 +31,31 @@
 #define AUDIO_BUFFER_CHANNELS	2
 #define AUDIO_BUFFER_LEN	AUDIO_BUFFER_SAMPLES * AUDIO_BUFFER_CHANNELS
 
-static void audio_Init( void );
 static void audio_InitCodec (uint32_t sampleRate, uint32_t volumePercent);
+
+static void audio_RxHalfCompleteCallback(SAI_HandleTypeDef* hsai);
+static void audio_RxCompleteCallback(SAI_HandleTypeDef* hsai);
 
 static uint32_t count = 0;
 static int16_t inputBufferLR[AUDIO_BUFFER_LEN] = {0};
 static int16_t outputBufferLR[AUDIO_BUFFER_LEN] = {0};
 
+static int16_t* audio_data_lr;
+
 void AUDIO_Start (SAI_HandleTypeDef* audio_in_sai, SAI_HandleTypeDef* audio_out_sai) {
 
-    uint32_t sampleRate = BSP_AUDIO_FREQUENCY_48K;
-    uint32_t bitRes = 16;
-    uint32_t unusedParam = 0;
 
     /* TODO Hardware Init that is currently handled by cube mx IOC. */
 
     /* Start the SAI Output Block to generate MCLK */
     __HAL_SAI_ENABLE(audio_out_sai);
 
-    audio_Init();
+    uint32_t sampleRate = BSP_AUDIO_FREQUENCY_48K;
+    audio_InitCodec(sampleRate, 100);
 
-    /* TODO Set Callbacks */
+    /* Set the callbacks */
+    HAL_SAI_RegisterCallback(audio_in_sai, HAL_SAI_RX_HALFCOMPLETE_CB_ID, audio_RxHalfCompleteCallback);
+    HAL_SAI_RegisterCallback(audio_in_sai, HAL_SAI_RX_COMPLETE_CB_ID, audio_RxCompleteCallback);
 
     /* End of init - onto start */
 
@@ -80,16 +84,12 @@ void AUDIO_Start (SAI_HandleTypeDef* audio_in_sai, SAI_HandleTypeDef* audio_out_
 
 }
 
-void    BSP_AUDIO_IN_TransferComplete_CallBack(void) {
-	count++;
-}
-void    BSP_AUDIO_IN_HalfTransfer_CallBack(void){
-	static uint8_t output = 0;
-	if (!output) {
-		//BSP_AUDIO_OUT_Play(inputBufferLR, AUDIO_BUFFER_SAMPLES);
-		output = 1;
-	}
-	count++;
+static void audio_RxHalfCompleteCallback(SAI_HandleTypeDef* hsai){
+    audio_data_lr = inputBufferLR[0];
+} 
+
+static void audio_RxCompleteCallback(SAI_HandleTypeDef* hsai){
+    audio_data_lr = inputBufferLR[AUDIO_BUFFER_LEN>>1];
 }
 
 static void audio_Init( void ) {
@@ -115,4 +115,3 @@ static void audio_InitCodec (uint32_t sampleRate, uint32_t volumePercent) {
     wm8994_drv.Init(AUDIO_I2C_ADDRESS, INPUT_DEVICE_INPUT_LINE_1 | OUTPUT_DEVICE_HEADPHONE, volumePercent, sampleRate);
 
 }
-
