@@ -1,41 +1,27 @@
-// /* Basic premise */
+/* == INCLUDES ============================================================= */
 
-// // Initialise audio in from 3.5mm 
-// BSP_AUDIO_IN_InitEx(INPUT_DEVICE_ANALOG_MIC)
-//     // SAIx_In_Init is what sets up the peripheral
-
-// // Start "recording"
-// BSP_AUDIO_IN_Record(buffer, buf_len)
-//     // This calls to the hal to start filling the buffer.
-
-// /* Need to implement */
-// void    BSP_AUDIO_IN_TransferComplete_CallBack(void);
-// void    BSP_AUDIO_IN_HalfTransfer_CallBack(void);
-// // Guess we can just have a "notify" function that tells us which half of the buffer to process.
-
-
-// /* For debug: */
-// uint8_t BSP_AUDIO_OUT_Init(uint16_t OutputDevice, uint8_t Volume, uint32_t AudioFreq);
-// // where output device is OUTPUT_DEVICE_HEADPHONE? - Think so
-
-// // To play - this uses circular buffer to play so we should just be able to always copy from in buff
-// // to out buff and start them at opposite
-// // IN xfer half irq - copy to out buff A
-// // IN xfer full irq - press play - copy to out buff B 
-//     BSP_AUDIO_OUT_Play()
-
-#include "stm32f769i_discovery_audio.h"
 #include "stdint.h"
+#include "stm32f7xx_hal.h"
+#include "wm8994.h"
+
+/* == CONFIGURATION ======================================================== */
 
 #define AUDIO_BUFFER_SAMPLES	1024
 #define AUDIO_BUFFER_CHANNELS	2
 #define AUDIO_BUFFER_LEN	AUDIO_BUFFER_SAMPLES * AUDIO_BUFFER_CHANNELS
+
+/* == DEFINES ============================================================== */
+
+#define AUDIO_I2C_ADDRESS                ((uint16_t)0x34)
+
+/* == FILE STATIC FUNCTIONS ================================================ */
 
 static void audio_InitCodec (uint32_t sampleRate, uint32_t volumePercent);
 
 static void audio_RxHalfCompleteCallback(SAI_HandleTypeDef* hsai);
 static void audio_RxCompleteCallback(SAI_HandleTypeDef* hsai);
 
+/* == FILE STATIC VARIABLES ================================================ */
 static uint32_t count = 0;
 static int16_t inputBufferLR[AUDIO_BUFFER_LEN] = {0};
 static int16_t outputBufferLR[AUDIO_BUFFER_LEN] = {0};
@@ -50,7 +36,7 @@ void AUDIO_Start (SAI_HandleTypeDef* audio_in_sai, SAI_HandleTypeDef* audio_out_
     /* Start the SAI Output Block to generate MCLK */
     __HAL_SAI_ENABLE(audio_out_sai);
 
-    uint32_t sampleRate = BSP_AUDIO_FREQUENCY_48K;
+    uint32_t sampleRate = SAI_AUDIO_FREQUENCY_48K;
     audio_InitCodec(sampleRate, 100);
 
     /* Set the callbacks */
@@ -94,7 +80,7 @@ static void audio_RxCompleteCallback(SAI_HandleTypeDef* hsai){
 
 static void audio_Init( void ) {
 
-    uint32_t sampleRate = BSP_AUDIO_FREQUENCY_48K;
+    uint32_t sampleRate = SAI_AUDIO_FREQUENCY_48K;
 
     audio_InitCodec(sampleRate, 100);
 
