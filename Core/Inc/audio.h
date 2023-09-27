@@ -4,7 +4,7 @@
 
 /* == CONFIGURATION ======================================================== */
 
-// #define AUDIO_DEBUG_UART (huart5)
+#define AUDIO_DEBUG_UART (huart5)
 #if defined AUDIO_DEBUG_UART
 extern UART_HandleTypeDef AUDIO_DEBUG_UART;
 #endif

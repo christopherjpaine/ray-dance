@@ -4,7 +4,7 @@
 
 /* == CONFIGURATION ======================================================== */
 
-#define DMX_DEBUG_UART (huart5)
+// #define DMX_DEBUG_UART (huart5)
 #if defined DMX_DEBUG_UART
 extern UART_HandleTypeDef DMX_DEBUG_UART;
 #endif

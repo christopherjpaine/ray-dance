@@ -63,13 +63,11 @@ static void audio_task(void* params);
 
 static void audio_Algorithm (int16_t *audio_lr);
 
-static void audio_DebugFftResults (float *fft_results_interleaved);
+static void audio_DebugResults (float *mag_f32);
 
 /* == FILE STATIC VARIABLES ================================================ */
 
 static int16_t audio_raw_buffer[AUDIO_BUFFER_RAW_MEMORY] = {0};
-
-static int16_t* audio_data_lr;
 
 static osThreadId_t audio_task_handle = NULL;
 static osMessageQueueId_t audio_queue_handle = NULL;
@@ -192,7 +190,8 @@ static void audio_task(void* params) {
 static void audio_RxHalfCompleteCallback(SAI_HandleTypeDef* hsai){
     if (audio_state != audio_STATE_AWAITING_BUFFER_A) {
         /* Underflow - we are not processing fast enough. */
-        __BKPT();
+//        __BKPT();
+        return;
     }
     audio_Event event = audio_EVENT_BUFFER_A_READY;
     osStatus_t s = osMessageQueuePut (audio_queue_handle, &event, 0, 0);
@@ -204,7 +203,8 @@ static void audio_RxHalfCompleteCallback(SAI_HandleTypeDef* hsai){
 static void audio_RxCompleteCallback(SAI_HandleTypeDef* hsai){
     if (audio_state != audio_STATE_AWAITING_BUFFER_B) {
         /* Underflow - we are not processing fast enough. */
-        __BKPT();
+//        __BKPT();
+    	return;
     }
     audio_Event event = audio_EVENT_BUFFER_B_READY;
     osStatus_t s = osMessageQueuePut (audio_queue_handle, &event, 0, 0);
@@ -261,17 +261,64 @@ static void audio_Algorithm (int16_t *audio_lr) {
      * is actually the pure magnitude value at nyquist freq so just discard it.
      * The rest of the data is real/imaginary interleaved so compute the 
      * magintude and store in our mag buffer. */
-    float scale_factor = 1;
-    audio_mag_f32[0] = audio_fft_f32[0] * scale_factor;
+    float scale_factor = 1.0f / AUDIO_BUFFER_SAMPLES_PER_CHANNEL;
+    audio_mag_f32[0] = fabs(audio_fft_f32[0]) * scale_factor;
     for (int i = AUDIO_FFT_SIZE/2-1; i > 0; i--) {
         float real_squared = audio_fft_f32[i*2] * audio_fft_f32[i*2];
         float imag_squared = audio_fft_f32[(i*2)+1] * audio_fft_f32[(i*2)+1];
         audio_mag_f32[i] = sqrtf(real_squared + imag_squared) * scale_factor;
     }
-
-    /* Debug results */
-    #if defined AUDIO_DEBUG_UART
-        // audio_DebugFftResults(audio_mag_f32);
-    #endif
     
+    audio_DebugResults(audio_mag_f32);
+
+}
+
+
+
+static void audio_DebugResults (float *mag_f32) {
+
+
+#if defined AUDIO_DEBUG_UART
+    /* Limit this to printing every half second */
+    const uint32_t rate_per_second = 3;
+    const uint32_t debug_count_max = (SAI_AUDIO_FREQUENCY_48K/AUDIO_BUFFER_SAMPLES_PER_CHANNEL)/rate_per_second;
+    static int debug_count=50;
+    if (debug_count-- > 0) {
+    	return;
+    }
+    debug_count = debug_count_max;
+
+    /* static debug buffers */
+    static const uint32_t num_mag = AUDIO_BUFFER_SAMPLES_PER_CHANNEL/2;
+    static const uint16_t debug_str_len = (AUDIO_BUFFER_SAMPLES_PER_CHANNEL/2)*4;
+    static char debug_str[(AUDIO_BUFFER_SAMPLES_PER_CHANNEL/2)*4];
+
+    /* Start with empty space */
+    memset(debug_str, ' ', debug_str_len);
+    
+    /* For each value, multiply by 1000 then convert to int, this should give
+     * up to 3 sig figs for each. Then convert and add into the string.*/
+    for (int i = 0; i < num_mag; i++) {
+        int temp_int = (int)(mag_f32[i] * 1000.0f);
+        char* temp_str[4] = {0};
+        itoa(temp_int, temp_str, 10);
+        memcpy(&debug_str[i*4], temp_str, strlen(temp_str));
+        debug_str[(i*4)+3] = ',';
+    }
+
+    /* End with new line */
+    memset(&debug_str[debug_str_len-1], '\n', 1);
+
+	/* Transmit */
+    HAL_StatusTypeDef s = HAL_UART_Transmit_DMA(&AUDIO_DEBUG_UART, debug_str, debug_str_len);
+    if (HAL_OK != s) {
+    	__BKPT();
+    }
+
+#endif
+
+}
+
+static void audio_DebugProcessingRate () {
+
 }
