@@ -7,6 +7,8 @@
 
 #include "wm8994.h"
 
+#include "arm_math.h"
+
 #include <stdint.h>
 
 /* == CONFIGURATION ======================================================== */
