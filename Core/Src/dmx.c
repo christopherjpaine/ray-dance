@@ -9,19 +9,17 @@
 
 #include <string.h>
 #include <stdlib.h>
+/* == CONFIGURATION ======================================================== */
 
-/* == DEFINES ============================================================== */
-#define DMX_MAX_RX_BUFFER_SIZE  513
+/* Start address of the fixture (remember this is not 0 indexed. )*/
+#define DMX_CHANNEL_START   1
 
-#define DMX_CHANNEL_START   0
-
+/* Number of channels required by the fixture. This should be atleast as 
+ * big as the size of the DMX_Data type in the interface. */
 #define DMX_NUM_CHANNELS    10
 
-#define DMX_CHANNEL_END     DMX_CHANNEL_START + DMX_NUM_CHANNELS
-
-/* bytes to read = channels needed + 1 start byte. */
-#define DMX_BYTES_TO_RX   DMX_CHANNEL_END + 1
-
+/* == DEFINES ============================================================== */
+#define DMX_MAX_RX_BUFFER_SIZE  513 // 512 + start byte
 
 /* == TYPES ================================================================ */
 typedef enum dmx_State_etag {
@@ -43,7 +41,7 @@ static uint8_t dmx_data_ready = 0;
 
 static uint8_t dmx_buffer[DMX_MAX_RX_BUFFER_SIZE] = {0};
 
-static uint8_t dmx_data[DMX_BYTES_TO_RX] = {0};
+static uint8_t dmx_data[DMX_NUM_CHANNELS] = {0};
 
 static void (*dmx_data_ready_callback) (DMX_Data*) = NULL; 
 
@@ -70,7 +68,7 @@ static void dmx_RxCompleteCallback (UART_HandleTypeDef* huart) {
              * move the unsynced state and start a new xfer. Any data rx
              * between now and the frame sync will be discarded. Usually
              * there is nothing but it could cause a problem. */
-            memcpy(dmx_data, dmx_buffer, DMX_BYTES_TO_RX);
+            memcpy(dmx_data, &dmx_buffer[DMX_CHANNEL_START], DMX_NUM_CHANNELS);
             dmx_data_ready = 1;
             s = HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE);
             if (HAL_OK != s) {
@@ -134,7 +132,7 @@ static void dmx_ErrorCallback (UART_HandleTypeDef* huart) {
             if ( (huart->ErrorCode & HAL_UART_ERROR_FE) == HAL_UART_ERROR_FE) {   
                 /* If any data hasn't been rx'd then it will just remain as it 
                  * was previously in dmx_buffer. */
-                memcpy(dmx_data, dmx_buffer, DMX_BYTES_TO_RX);
+                memcpy(dmx_data, &dmx_buffer[DMX_CHANNEL_START], DMX_NUM_CHANNELS);
                 dmx_data_ready = 1;
             } else {
                 dmx_state = dmx_STATE_UNSYNC;
@@ -186,14 +184,10 @@ static void dmx_task(void* params) {
                     /* Reset data ready */
                     dmx_data_ready = 0;
 
-                    /* Get pointer to start of relevant data (we might not 
-                     * be receving from channel 0)*/
-                    void* data_ptr = &dmx_data[DMX_CHANNEL_START];
-
                     /* Run callback if enabled - Interface level data type 
                      * should be byte-wise equivalent of raw data. */
                     if (dmx_data_ready_callback) {
-                        dmx_data_ready_callback((DMX_Data*)data_ptr);
+                        dmx_data_ready_callback((DMX_Data*)dmx_data);
                     }
 
                     /* Create our debug string - We just print chars directly
@@ -204,7 +198,7 @@ static void dmx_task(void* params) {
                     memset(debug_string_ptr, ' ', DEBUG_STRING_SIZE-5);
                     for (int i = 0; i < DMX_NUM_CHANNELS; i++) {
                     	char* temp[4] = {0};
-                        itoa(((uint8_t*)data_ptr)[i], temp, 10);
+                        itoa(((uint8_t*)dmx_data)[i], temp, 10);
                         memcpy(&debug_string_ptr[i*4], temp, strlen(temp));
                         debug_string_ptr[(i*4)+3] = ',';
                     }
