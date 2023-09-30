@@ -87,7 +87,7 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
+						<entry excluding="CMSIS/DSP/Source/WindowFunctions|CMSIS/DSP/Source/BayesFunctions|CMSIS/DSP/Source/ComplexMathFunctions|CMSIS/DSP/Source/InterpolationFunctions|CMSIS/DSP/Source/MatrixFunctions|CMSIS/DSP/Source/SVMFunctions|CMSIS/DSP/Source/QuaternionMathFunctions|CMSIS/DSP/Source/StatisticsFunctions" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
 					</sourceEntries>
 				</configuration>
@@ -167,7 +167,7 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
+						<entry excluding="CMSIS/DSP/Source/WindowFunctions|CMSIS/DSP/Source/BayesFunctions|CMSIS/DSP/Source/ComplexMathFunctions|CMSIS/DSP/Source/InterpolationFunctions|CMSIS/DSP/Source/MatrixFunctions|CMSIS/DSP/Source/SVMFunctions|CMSIS/DSP/Source/QuaternionMathFunctions|CMSIS/DSP/Source/StatisticsFunctions" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
 					</sourceEntries>
 				</configuration>
