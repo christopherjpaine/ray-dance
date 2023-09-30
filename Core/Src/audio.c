@@ -15,37 +15,40 @@
 
 /* == CONFIGURATION ======================================================== */
 
-/* Sample Rate */
-#define AUDIO_SAMPLE_RATE_Hz        SAI_AUDIO_FREQUENCY_48K
+/* The minimum frequency in the spectrum we wish to analyse */
+#define audio_MINIMUM_ANALYSIS_FREQUENCY    20.0f
 
-/* Buffer Properties */
-#define AUDIO_BUFFER_SAMPLES_PER_CHANNEL	1024U
-#define AUDIO_BUFFER_CHANNELS	2
-
-/* FFT Size 
- * This should be greater than the audio samples per channel such that we get
- * a decent amount of padding. However it must align to a power of 2. */
-#define AUDIO_FFT_SIZE 2048U
+/* The maximum frequency in the spectrum we wish to analyse.
+ * Could be better visually to have finer detail in mid range */
+#define audio_MAXIMUM_ANALYSIS_FREQUENCY    20000.0f
 
 /* == DEFINES ============================================================== */
 
+/* Sample Rate 
+ * Changing this requires changes to the */
+#define audio_SAMPLE_RATE_Hz        SAI_AUDIO_FREQUENCY_48K
+
 /* I2C Address of codec */
-#define AUDIO_I2C_ADDRESS                ((uint16_t)0x34)
+#define audio_I2C_ADDRESS                ((uint16_t)0x34)
+
+/* Audio Channels 
+ * Normally 2 for Left and Right interleaved. */
+#define audio_BUFFER_CHANNELS	2
 
 /* Size of the audio buffer in total samples */
-#define AUDIO_BUFFER_SIZE AUDIO_BUFFER_SAMPLES_PER_CHANNEL * AUDIO_BUFFER_CHANNELS
+#define audio_BUFFER_SIZE AUDIO_BUFFER_SAMPLES_PER_CHANNEL * audio_BUFFER_CHANNELS
 
 /* Audio Buffer Total Length 
  * n samples per channel, multiplied by 2 such that both of the ping-pong 
  * buffers are equal. */
-#define AUDIO_BUFFER_RAW_MEMORY	AUDIO_BUFFER_SIZE * 2
+#define audio_BUFFER_RAW_MEMORY	audio_BUFFER_SIZE * 2
 
 /* FFT Padding */
-#define AUDIO_FFT_PADDING   (AUDIO_FFT_SIZE - AUDIO_BUFFER_SAMPLES_PER_CHANNEL)
+#define audio_FFT_PADDING   (AUDIO_FFT_SIZE - AUDIO_BUFFER_SAMPLES_PER_CHANNEL)
 
 /* Audio FFT Bins 
  * Number of bins is half that of the fft size */
-#define AUDIO_FFT_BINS      AUDIO_FFT_SIZE / 2
+#define audio_FFT_NUM_BINS      AUDIO_FFT_SIZE / 2
 
 /* == TYPES ================================================================ */
 
@@ -75,7 +78,7 @@ static void audio_DebugResults (float *mag_f32, UART_HandleTypeDef* huart);
 
 /* == FILE STATIC VARIABLES ================================================ */
 
-static int16_t audio_raw_buffer[AUDIO_BUFFER_RAW_MEMORY] = {0};
+static int16_t audio_raw_buffer[audio_BUFFER_RAW_MEMORY] = {0};
 
 static osThreadId_t audio_task_handle = NULL;
 static osMessageQueueId_t audio_queue_handle = NULL;
@@ -85,6 +88,9 @@ static SAI_HandleTypeDef* audio_output_sai = NULL;
 audio_State audio_state = audio_STATE_AWAITING_BUFFER_A;
 
 arm_rfft_fast_instance_f32 audio_fft_instance;
+
+ALGO_FreqAnalysis audio_freq_analysis = {0};
+ALGO_FftProperties audio_fft_properties = {0};
 
 /* == INTERFACE FUNCTIONS ================================================== */
 
@@ -108,12 +114,12 @@ void AUDIO_Init (SAI_HandleTypeDef* input_sai, SAI_HandleTypeDef* output_sai) {
 void AUDIO_Start (void) {
 
 	/* Init codec once RTOS is running */
-	audio_InitCodec(AUDIO_SAMPLE_RATE_Hz, 100);
+	audio_InitCodec(audio_SAMPLE_RATE_Hz, 100);
 
     /* Unmute the Audio CODEC 
      * Note that the API says it needs buffer and size, this is not the case
      * so we send NULL and 0. */
-    if (wm8994_drv.Play(AUDIO_I2C_ADDRESS, NULL, 0) != 0)
+    if (wm8994_drv.Play(audio_I2C_ADDRESS, NULL, 0) != 0)
     {
         __BKPT();
     }
@@ -142,30 +148,43 @@ static void audio_task(void* params) {
     }
 
     /* Print the FFT Properties */
-    ALGO_FftProperties fft_properties = {
-        .in = {
-            .sampling_rate = AUDIO_SAMPLE_RATE_Hz,
+    
+    audio_fft_properties.init.sampling_rate = audio_SAMPLE_RATE_Hz;
+    audio_fft_properties.init.samples_per_channel_per_buffer = AUDIO_BUFFER_SAMPLES_PER_CHANNEL;
+    audio_fft_properties.init.fft_size = AUDIO_FFT_SIZE;
+    ALGO_InitFftProperties(&audio_fft_properties);
+    ALGO_Print(ALGO_PRINT_TYPE_FFT_PROPERTIES, &audio_fft_properties, &AUDIO_DEBUG_UART);
+    osDelay(100); // print delay
+
+    ALGO_FreqBand freq_bands[AUDIO_NUM_FREQ_BANDS] = {0};
+    audio_freq_analysis.num_bands = AUDIO_NUM_FREQ_BANDS;
+    audio_freq_analysis.min_freq = audio_MINIMUM_ANALYSIS_FREQUENCY;
+    audio_freq_analysis.max_freq = audio_MAXIMUM_ANALYSIS_FREQUENCY;
+    audio_freq_analysis.freq_bands = &freq_bands;
+    ALGO_InitFreqAnalysis(&audio_freq_analysis);
+
+    ALGO_PipelineProperties pipeline = {
+        .init = {
+            .sampling_rate = audio_SAMPLE_RATE_Hz,
             .samples_per_channel_per_buffer = AUDIO_BUFFER_SAMPLES_PER_CHANNEL,
-            .fft_size = AUDIO_FFT_SIZE,
+            .sys_clock_rate_Hz = SystemCoreClock
         }
     };
-    ALGO_CalculateFftProperties(&fft_properties);
-    ALGO_Print(ALGO_PRINT_TYPE_FFT_PROPERTIES, &fft_properties, &AUDIO_DEBUG_UART);
+    ALGO_InitPipelineProperties(&pipeline);
 
-    /* Delay to finish printing before */
-    osDelay(500);
+    /* Start audio driver */
 
     /* Begin Transmitting on the Output SAI. This is used for debug purposes
      * really, makes it easy to verify audio is being rx'd correctly. And
      * gives you a usable audio output if you need it. */
-    HAL_StatusTypeDef s = HAL_SAI_Transmit_DMA(audio_output_sai, (uint8_t*)audio_raw_buffer, AUDIO_BUFFER_RAW_MEMORY);
+    HAL_StatusTypeDef s = HAL_SAI_Transmit_DMA(audio_output_sai, (uint8_t*)audio_raw_buffer, audio_BUFFER_RAW_MEMORY);
     if (HAL_OK != s) {
         __BKPT();
     }
 
     /* Start receiving on the Input SAI. We will then drive the audio task
      * from the interrupts of this peripheral. */
-    s = HAL_SAI_Receive_DMA(audio_input_sai, (uint8_t*)audio_raw_buffer, AUDIO_BUFFER_RAW_MEMORY);
+    s = HAL_SAI_Receive_DMA(audio_input_sai, (uint8_t*)audio_raw_buffer, audio_BUFFER_RAW_MEMORY);
     if(HAL_OK != s) {
         __BKPT();
     }
@@ -198,7 +217,7 @@ static void audio_task(void* params) {
 
             case audio_EVENT_BUFFER_B_READY:
                 /* Run processing algo with pointer to mid-point of buffer */
-                audio_Algorithm(&audio_raw_buffer[AUDIO_BUFFER_RAW_MEMORY>>1]);
+                audio_Algorithm(&audio_raw_buffer[audio_BUFFER_RAW_MEMORY>>1]);
 
                 /* Set state to awating Buffer A */
                 audio_state = audio_STATE_AWAITING_BUFFER_A;
@@ -237,16 +256,16 @@ static void audio_RxCompleteCallback(SAI_HandleTypeDef* hsai){
 static void audio_InitCodec (uint32_t sampleRate, uint32_t volumePercent) {
 
     /* Verify codec is there*/
-    if(wm8994_drv.ReadID(AUDIO_I2C_ADDRESS) != WM8994_ID){
+    if(wm8994_drv.ReadID(audio_I2C_ADDRESS) != WM8994_ID){
         __BKPT();
         while(1);
     }
 
     /* Reset the Codec Registers */
-    wm8994_drv.Reset(AUDIO_I2C_ADDRESS);
+    wm8994_drv.Reset(audio_I2C_ADDRESS);
  
     /* Initialize the codec internal registers */
-    wm8994_drv.Init(AUDIO_I2C_ADDRESS, INPUT_DEVICE_INPUT_LINE_1 | OUTPUT_DEVICE_HEADPHONE, volumePercent, sampleRate);
+    wm8994_drv.Init(audio_I2C_ADDRESS, INPUT_DEVICE_INPUT_LINE_1 | OUTPUT_DEVICE_HEADPHONE, volumePercent, sampleRate);
 
 }
 
@@ -256,8 +275,10 @@ static int16_t audio_m_q15[AUDIO_BUFFER_SAMPLES_PER_CHANNEL];
 static float audio_m_f32_padded[AUDIO_FFT_SIZE] = {0.0f};
 /* Interleaved real/imag fft result data */
 static float audio_fft_f32[AUDIO_FFT_SIZE] = {0.0f};
-/* Magntiude of fft */
-static float audio_mag_f32[AUDIO_FFT_SIZE/2] = {0.0f};
+/* Magntiudes from fft */
+static float audio_mag_f32[audio_FFT_NUM_BINS] = {0.0f};
+/* Magnitude of bins from freq analysis */
+static float audio_band_mag_f32[AUDIO_NUM_FREQ_BANDS] = {0.0f};
 
 /* audio_lr - buffer of interleaved audio samples. */
 static void audio_Algorithm (int16_t *audio_lr) {
@@ -271,8 +292,8 @@ static void audio_Algorithm (int16_t *audio_lr) {
 
     /* Convert to float and place in padded array, reset the padding to zero
      * as the cmsis fft function messes with it. */
-    memset(audio_m_f32_padded, 0, AUDIO_FFT_PADDING*sizeof(float));
-    float* audio_m_f32 = &audio_m_f32_padded[AUDIO_FFT_PADDING];
+    memset(audio_m_f32_padded, 0, audio_FFT_PADDING*sizeof(float));
+    float* audio_m_f32 = &audio_m_f32_padded[audio_FFT_PADDING];
     arm_q15_to_float(audio_m_q15, audio_m_f32, AUDIO_BUFFER_SAMPLES_PER_CHANNEL);
 
     /* Run fft */
@@ -294,6 +315,9 @@ static void audio_Algorithm (int16_t *audio_lr) {
     }
     
     audio_DebugResults(audio_mag_f32, &AUDIO_DEBUG_UART);
+
+    ALGO_RunFreqAnalysis(&audio_freq_analysis, &audio_fft_properties, 
+                         audio_mag_f32, audio_band_mag_f32);
 
 }
 
@@ -340,9 +364,5 @@ static void audio_DebugResults (float *mag_f32, UART_HandleTypeDef* huart) {
     if (HAL_OK != s) {
     	__BKPT();
     }
-
-}
-
-static void audio_DebugProcessingRate () {
 
 }
