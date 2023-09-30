@@ -6,7 +6,7 @@
 
 #include "stm32f7xx_hal.h"
 
-#define LED_NUM_LEDS 8
+#define LED_NUM_LEDS 100
 #define LED_SPI_HANDLE hspi2
 
 #define LED_RESET_PULSE_BYTES 60
