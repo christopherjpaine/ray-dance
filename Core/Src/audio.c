@@ -6,6 +6,7 @@
 #include "cmsis_os.h"
 
 #include "wm8994.h"
+#include "algo.h"
 
 #define ARM_MATH_CM7
 #include "arm_math.h"
@@ -14,6 +15,10 @@
 
 /* == CONFIGURATION ======================================================== */
 
+/* Sample Rate */
+#define AUDIO_SAMPLE_RATE_Hz        SAI_AUDIO_FREQUENCY_48K
+
+/* Buffer Properties */
 #define AUDIO_BUFFER_SAMPLES_PER_CHANNEL	1024U
 #define AUDIO_BUFFER_CHANNELS	2
 
@@ -66,7 +71,7 @@ static void audio_task(void* params);
 
 static void audio_Algorithm (int16_t *audio_lr);
 
-static void audio_DebugResults (float *mag_f32);
+static void audio_DebugResults (float *mag_f32, UART_HandleTypeDef* huart);
 
 /* == FILE STATIC VARIABLES ================================================ */
 
@@ -98,6 +103,21 @@ void AUDIO_Init (SAI_HandleTypeDef* input_sai, SAI_HandleTypeDef* output_sai) {
     HAL_SAI_RegisterCallback(audio_input_sai, HAL_SAI_RX_HALFCOMPLETE_CB_ID, audio_RxHalfCompleteCallback);
     HAL_SAI_RegisterCallback(audio_input_sai, HAL_SAI_RX_COMPLETE_CB_ID, audio_RxCompleteCallback);
 
+}
+
+void AUDIO_Start (void) {
+
+	/* Init codec once RTOS is running */
+	audio_InitCodec(AUDIO_SAMPLE_RATE_Hz, 100);
+
+    /* Unmute the Audio CODEC 
+     * Note that the API says it needs buffer and size, this is not the case
+     * so we send NULL and 0. */
+    if (wm8994_drv.Play(AUDIO_I2C_ADDRESS, NULL, 0) != 0)
+    {
+        __BKPT();
+    }
+
     /* Create the audio task and it's event queue */
     osThreadAttr_t thread_params = {
         .name = "audio",
@@ -112,19 +132,28 @@ void AUDIO_Init (SAI_HandleTypeDef* input_sai, SAI_HandleTypeDef* output_sai) {
 
 }
 
-void AUDIO_Start (void) {
+static void audio_task(void* params) {
+    (void) params;
 
-	uint32_t sampleRate = SAI_AUDIO_FREQUENCY_48K;
-	/* Init codec once RTOS is running */
-	audio_InitCodec(sampleRate, 100);
-
-    /* Unmute the Audio CODEC 
-     * Note that the API says it needs buffer and size, this is not the case
-     * so we send NULL and 0. */
-    if (wm8994_drv.Play(AUDIO_I2C_ADDRESS, NULL, 0) != 0)
-    {
+    /* Initialise an arm fft instance for 32 bit floats. */
+    arm_status fft_stat = arm_rfft_fast_init_f32 (&audio_fft_instance, AUDIO_FFT_SIZE);
+    if (fft_stat != ARM_MATH_SUCCESS) {
         __BKPT();
     }
+
+    /* Print the FFT Properties */
+    ALGO_FftProperties fft_properties = {
+        .in = {
+            .sampling_rate = AUDIO_SAMPLE_RATE_Hz,
+            .samples_per_channel_per_buffer = AUDIO_BUFFER_SAMPLES_PER_CHANNEL,
+            .fft_size = AUDIO_FFT_SIZE,
+        }
+    };
+    ALGO_CalculateFftProperties(&fft_properties);
+    ALGO_Print(ALGO_PRINT_TYPE_FFT_PROPERTIES, &fft_properties, &AUDIO_DEBUG_UART);
+
+    /* Delay to finish printing before */
+    osDelay(500);
 
     /* Begin Transmitting on the Output SAI. This is used for debug purposes
      * really, makes it easy to verify audio is being rx'd correctly. And
@@ -138,17 +167,6 @@ void AUDIO_Start (void) {
      * from the interrupts of this peripheral. */
     s = HAL_SAI_Receive_DMA(audio_input_sai, (uint8_t*)audio_raw_buffer, AUDIO_BUFFER_RAW_MEMORY);
     if(HAL_OK != s) {
-        __BKPT();
-    }
-
-}
-
-static void audio_task(void* params) {
-    (void) params;
-
-    /* Initialise an arm fft instance for 32 bit floats. */
-    arm_status fft_stat = arm_rfft_fast_init_f32 (&audio_fft_instance, AUDIO_FFT_SIZE);
-    if (fft_stat != ARM_MATH_SUCCESS) {
         __BKPT();
     }
 
@@ -275,16 +293,18 @@ static void audio_Algorithm (int16_t *audio_lr) {
         audio_mag_f32[i] = sqrtf(real_squared + imag_squared) * scale_factor;
     }
     
-    audio_DebugResults(audio_mag_f32);
+    audio_DebugResults(audio_mag_f32, &AUDIO_DEBUG_UART);
 
 }
 
 
 
-static void audio_DebugResults (float *mag_f32) {
+static void audio_DebugResults (float *mag_f32, UART_HandleTypeDef* huart) {
+    
+    if (!huart) {
+        return;
+    }
 
-
-#if defined AUDIO_DEBUG_UART
     /* Limit this to printing every half second */
     const uint32_t rate_per_second = 3;
     const uint32_t debug_count_max = (SAI_AUDIO_FREQUENCY_48K/AUDIO_BUFFER_SAMPLES_PER_CHANNEL)/rate_per_second;
@@ -316,12 +336,10 @@ static void audio_DebugResults (float *mag_f32) {
     memset(&debug_str[debug_str_len-1], '\n', 1);
 
 	/* Transmit */
-    HAL_StatusTypeDef s = HAL_UART_Transmit_DMA(&AUDIO_DEBUG_UART, debug_str, debug_str_len);
+    HAL_StatusTypeDef s = HAL_UART_Transmit_DMA(huart, debug_str, debug_str_len);
     if (HAL_OK != s) {
     	__BKPT();
     }
-
-#endif
 
 }
 
