@@ -6,6 +6,7 @@
 #include "arm_math.h"
 
 #include <stdint.h>
+#include <math.h>
 
 /* == CONFIGURATION ======================================================== */
 
@@ -19,18 +20,15 @@
 /* == FILE STATIC FUNCTIONS ================================================ */
 
 static void CalculateFreqRanges (ALGO_FreqBand* band_array, float min_freq, float max_freq, uint32_t num_ranges);
+static inline float ApplyGain(float input, float gain_dB);
+static inline float CalculateLogarithmicMagnitude(float linear_magnitude, float contrast);
+static inline float ApplyLimit (float input);
 
 /* == FILE STATIC VARIABLES ================================================ */
 
 static char algo_print_buffer[PRINT_BUFFER_SIZE];
 
-
 /* == INTERFACE FUNCTIONS ================================================== */
-
-void ALGO_InitFreqAnalysis (ALGO_FreqAnalysis* freq_analysis) {
-    CalculateFreqRanges (freq_analysis->freq_bands, freq_analysis->min_freq, 
-                         freq_analysis->max_freq, freq_analysis->num_bands);
-}
 
 void ALGO_InitPipelineProperties (ALGO_PipelineProperties* pipeline) {
 
@@ -64,6 +62,10 @@ void ALGO_InitFftProperties (ALGO_FftProperties* fft) {
      * the full input buffer including padding. Can be referred to as bin-range. */
     fft->out.freq_precision = fft->init.sampling_rate / fft->init.fft_size;
 
+}
+void ALGO_InitFreqAnalysis (ALGO_FreqAnalysis* freq_analysis) {
+    CalculateFreqRanges (freq_analysis->freq_bands, freq_analysis->min_freq, 
+                         freq_analysis->max_freq, freq_analysis->num_bands);
 }
 
 void ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
@@ -106,6 +108,17 @@ void ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
         /* Add bin range on each loop and update bin count. */
         bin_freq += fft->out.freq_precision;
         bin_count++;
+    }
+
+    /* TODO Apply smoothing filters */
+
+    /* Apply gain and contrast parameters to band magnitudes. The contrast 
+     * function allow you to adjust the mapping from lin->log such that we
+     * exagerrate or minimize the variance */
+    for (int i = 0; i < freq_analysis->num_bands; i++) {
+        mag_buf[i] = ApplyGain(mag_buf[i], freq_analysis->dynamic.gain_dB);
+        mag_buf[i] = ApplyLimit(mag_buf[i]);
+        mag_buf[i] = CalculateLogarithmicMagnitude(mag_buf[i], freq_analysis->dynamic.gain_dB);
     }
 
 }
@@ -153,7 +166,6 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
 }
 
 static void CalculateFreqRanges (ALGO_FreqBand* band_array, float min_freq, float max_freq, uint32_t num_ranges) {
-
     /* Calculate the logarithmic scale factor */
     double s = (log(max_freq) - log(min_freq)) / num_ranges;
 
@@ -165,4 +177,47 @@ static void CalculateFreqRanges (ALGO_FreqBand* band_array, float min_freq, floa
         band_array[i].start_freq = min_freq * exp(i * s);
         band_array[i].end_freq = min_freq * exp((i + 1) * s);
     }
+}
+
+static inline float ApplyGain(float input, float gain_dB) {
+    // Convert dB gain to linear scale and apply gain to the input
+    float output = input * pow(10, gain_dB / 20.0);
+    return output;
+}
+
+/**
+ * @brief Calculates the logarithmic magnitude from a linear magnitude for a 
+ * given linear contrast.
+ *
+ * @param linear_magnitude The input linear magnitude between 0 and 1.
+ * @param scale_factor The scale factor applied to the calculated logarithmic magnitude.
+ * @param contrast The contrast factor (+/-1.0f range) used in the exponential
+ * transformation. Increasing contrast will increase the difference between 
+ * high and low magnitudes and vice-versa.
+ * @return The calculated logarithmic magnitude. 
+ */
+static inline float CalculateLogarithmicMagnitude(float linear_magnitude, float contrast) {
+    // Catch invalid input (clipping)
+    if (linear_magnitude > 1.0f || linear_magnitude < 0.0f) {
+        __BKPT();
+    }
+    
+    // Handle the case where linear_magnitude is zero
+    if (linear_magnitude == 0) {
+        return 0;
+    }
+    
+    // Linear value for contrast is transformed onto a 2^x exponential scale...
+    float contrast_sensitivity = 5;
+    float transformed_exponent = powf(2, contrast * contrast_sensitivity);
+    
+    // ..which is then used to define the exponential mapping of the linear
+    // input onto an exponential scale giving us the resulting log-magnitude
+    float logarithmic_magnitude = powf(linear_magnitude, transformed_exponent);
+    
+    return logarithmic_magnitude;
+}
+
+static inline float ApplyLimit (float input) {
+    return fminf(1.0f, input);
 }

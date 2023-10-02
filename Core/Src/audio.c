@@ -148,7 +148,6 @@ static void audio_task(void* params) {
     }
 
     /* Print the FFT Properties */
-    
     audio_fft_properties.init.sampling_rate = audio_SAMPLE_RATE_Hz;
     audio_fft_properties.init.samples_per_channel_per_buffer = AUDIO_BUFFER_SAMPLES_PER_CHANNEL;
     audio_fft_properties.init.fft_size = AUDIO_FFT_SIZE;
@@ -161,6 +160,8 @@ static void audio_task(void* params) {
     audio_freq_analysis.min_freq = audio_MINIMUM_ANALYSIS_FREQUENCY;
     audio_freq_analysis.max_freq = audio_MAXIMUM_ANALYSIS_FREQUENCY;
     audio_freq_analysis.freq_bands = &freq_bands;
+    audio_freq_analysis.dynamic.gain_dB = 0.0f;
+    audio_freq_analysis.dynamic.contrast = 0.0f;
     ALGO_InitFreqAnalysis(&audio_freq_analysis);
 
     ALGO_PipelineProperties pipeline = {
@@ -318,6 +319,11 @@ static void audio_Algorithm (int16_t *audio_lr) {
 
     ALGO_RunFreqAnalysis(&audio_freq_analysis, &audio_fft_properties, 
                          audio_mag_f32, audio_band_mag_f32);
+
+    // for (int i = 0; i < AUDIO_NUM_FREQ_BANDS; i++) {
+    //     LED_SetPixel(255*audio_band_mag_f32[i], 0, 0);
+    // }
+    // LED_Sync();
 
 }
 

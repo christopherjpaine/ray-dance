@@ -27,6 +27,10 @@ typedef struct ALGO_FreqAnalysis_s {
     float min_freq;
     float max_freq;
     ALGO_FreqBand* freq_bands;
+    struct {
+        float gain_dB;
+        float contrast; // +/-1.0f
+    }dynamic;
 }ALGO_FreqAnalysis;
 
 typedef struct ALGO_FftProperties_s {
@@ -63,17 +67,6 @@ typedef struct ALGO_PipelineProperties_s {
 
 /* == INTERFACE FUNCTIONS ================================================== */
 
-
-/**
- * @brief Initialise a frequency analysis module.
- * @param freq_analysis pointer to structure describing properties of analysis
- * and providing pointers to the required memory.
- * @details You will then be able to use this object to perform frequency 
- * analysis given a buffer containing the raw magnitude data from an fft.
- * In this context "analysis" means getting the magnitude of each band. 
- */
-void ALGO_InitFreqAnalysis (ALGO_FreqAnalysis* freq_analysis);
-
 /** 
  * @brief Initialise a pipeline properties object
  * @param pipeline pointer to structure describing the pipeline. This object
@@ -84,6 +77,15 @@ void ALGO_InitPipelineProperties (ALGO_PipelineProperties* pipeline);
 /** @brief Caculate the properties of an FFT */
 void ALGO_InitFftProperties (ALGO_FftProperties* fft);
 
+/**
+ * @brief Initialise a frequency analysis module.
+ * @param freq_analysis pointer to structure describing properties of analysis
+ * and providing pointers to the required memory.
+ * @details You will then be able to use this object to perform frequency 
+ * analysis given a buffer containing the raw magnitude data from an fft.
+ * In this context "analysis" means getting the magnitude of each band. 
+ */
+void ALGO_InitFreqAnalysis (ALGO_FreqAnalysis* freq_analysis);
 
 /** 
  * @brief performs frequency analysis based on a buffer of magnitudes from 
