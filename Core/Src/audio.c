@@ -7,6 +7,7 @@
 
 #include "wm8994.h"
 #include "algo.h"
+#include "led.h"
 
 #define ARM_MATH_CM7
 #include "arm_math.h"
@@ -161,7 +162,7 @@ static void audio_task(void* params) {
     audio_freq_analysis.max_freq = audio_MAXIMUM_ANALYSIS_FREQUENCY;
     audio_freq_analysis.freq_bands = &freq_bands;
     audio_freq_analysis.dynamic.gain_dB = 0.0f;
-    audio_freq_analysis.dynamic.contrast = 0.0f;
+    audio_freq_analysis.dynamic.contrast = 0.5f;
     ALGO_InitFreqAnalysis(&audio_freq_analysis);
 
     ALGO_PipelineProperties pipeline = {
@@ -320,10 +321,11 @@ static void audio_Algorithm (int16_t *audio_lr) {
     ALGO_RunFreqAnalysis(&audio_freq_analysis, &audio_fft_properties, 
                          audio_mag_f32, audio_band_mag_f32);
 
-    // for (int i = 0; i < AUDIO_NUM_FREQ_BANDS; i++) {
-    //     LED_SetPixel(255*audio_band_mag_f32[i], 0, 0);
-    // }
-    // LED_Sync();
+    for (int i = 0; i < AUDIO_NUM_FREQ_BANDS; i++) {
+    	uint8_t red = 255 * audio_band_mag_f32[i];
+        LED_SetPixel(i, red, 0, 0);
+    }
+    LED_Sync();
 
 }
 

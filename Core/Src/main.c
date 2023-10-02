@@ -610,7 +610,7 @@ void StartDefaultTask(void *argument)
   /* USER CODE BEGIN 5 */
 
   LED_Init();
-  DMX_Init(&huart6, update_led_callback);
+  DMX_Init(&huart6, NULL);
 
   AUDIO_Start();
   

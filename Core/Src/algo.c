@@ -208,7 +208,7 @@ static inline float CalculateLogarithmicMagnitude(float linear_magnitude, float 
     }
     
     // Linear value for contrast is transformed onto a 2^x exponential scale...
-    float contrast_sensitivity = 5;
+    float contrast_sensitivity = 1;
     float transformed_exponent = powf(2, contrast * contrast_sensitivity);
     
     // ..which is then used to define the exponential mapping of the linear
