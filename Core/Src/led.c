@@ -4,9 +4,9 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define PIXEL_DEBUG
+#define led_RESET_PULSE_BYTES 60
+#define led_BUFFER_SIZE_BYTES (LED_NUM_LEDS * 24 + led_RESET_PULSE_BYTES)
 
-#if defined PIXEL_DEBUG
 typedef struct PixelDebug_s {
     uint8_t r;
     uint8_t g;
@@ -14,9 +14,9 @@ typedef struct PixelDebug_s {
 } PixelDebug;
 
 static PixelDebug pixel_buffer[LED_NUM_LEDS] = {0};
-#endif
 
-uint8_t byte_buffer[LED_BUFFER_SIZE_BYTES];
+
+uint8_t byte_buffer[led_BUFFER_SIZE_BYTES];
 bool led_busy = false;
 
 static void sync_complete_callback (SPI_HandleTypeDef hSpi);
@@ -53,7 +53,7 @@ static inline void set_pixel(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b) {
         pixel_buffer[pixel].g = g;
         pixel_buffer[pixel].b = b;
     #endif
-    uint16_t pixel_pos = (24 * pixel) + LED_RESET_PULSE_BYTES;
+    uint16_t pixel_pos = (24 * pixel) + led_RESET_PULSE_BYTES;
     uint8_t* ptr_g = &byte_buffer[pixel_pos];
     uint8_t* ptr_r = &byte_buffer[pixel_pos+8];
     uint8_t* ptr_b = &byte_buffer[pixel_pos+16];
@@ -96,7 +96,7 @@ void LED_Sync(void) {
         return;
     }
     led_busy = true;
-    HAL_SPI_Transmit_DMA(&LED_SPI_HANDLE, byte_buffer, LED_BUFFER_SIZE_BYTES);
+    HAL_SPI_Transmit_DMA(&LED_SPI_HANDLE, byte_buffer, led_BUFFER_SIZE_BYTES);
 }
 
 static void sync_complete_callback (SPI_HandleTypeDef hSpi) {
