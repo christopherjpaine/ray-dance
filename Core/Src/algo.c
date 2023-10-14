@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <math.h>
 
+#include "mpaland/printf.h"
+
 /* == CONFIGURATION ======================================================== */
 
 #define PRINT_BUFFER_SIZE   256
