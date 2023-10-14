@@ -161,7 +161,7 @@ static void audio_task(void* params) {
     audio_freq_analysis.min_freq = audio_MINIMUM_ANALYSIS_FREQUENCY;
     audio_freq_analysis.max_freq = audio_MAXIMUM_ANALYSIS_FREQUENCY;
     audio_freq_analysis.freq_bands = &freq_bands;
-    audio_freq_analysis.dynamic.gain_dB = 0.0f;
+    audio_freq_analysis.dynamic.gain_dB = 18.0f;
     audio_freq_analysis.dynamic.contrast = 0.5f;
     ALGO_InitFreqAnalysis(&audio_freq_analysis);
 
