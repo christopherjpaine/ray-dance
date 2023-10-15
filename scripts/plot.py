@@ -8,26 +8,32 @@ from matplotlib.collections import PatchCollection
 import serial
 
 class RaydancePlotter:
-    def __init__(self, num_bins, fft_precision, freq_bands):
-        self.fft_precision = fft_precision
-        self._plot_init(num_bins, freq_bands)
-
-    def _plot_init(self, num_bins, freq_bands):
-        """
-        Initializes the plot with titles, scales, and initial data.
-        """
-        # Create plot with titles and log x scale.
+    def __init__(self):
         self._fig, self._ax = plt.subplots()
         self._ax.set_xlabel('Frequency')
         self._ax.set_ylabel('Magnitude')
         self._ax.set_title('Ray-dance Simulator')
+        self._background = None
+        self._band_rectangles = []
+        self._fft_plot = None
+        self._band_bar = None
+
+    def init_both(self, num_bins, fft_precision, freq_bands):
+        self.fft_precision = fft_precision
         self._ax.set_xscale('log')
+        self._plot_init(num_bins, freq_bands)
 
-        # If Freq bands is an int rather than iterable make a dummy set
-        if type(freq_bands) is int:
-            freq_bands = [(i, i+1) for i in np.linspace(0,freq_bands-1,freq_bands)]
-            print(freq_bands)
+    def init_bars(self, num_bands):
+        freq_bands = [(i, i + 1) for i in np.linspace(0, num_bands - 1, num_bands)]
+        self.fft_precision = 1
+        self._plot_init(num_bands, freq_bands)
 
+
+    def _plot_init(self, num_bins, freq_bands):
+        """
+        Create the empty data sets for the plot and configures them to be animated data sets.
+        """
+        
         # Create empty data set
         self._fft_plot_x = np.arange(num_bins) * self.fft_precision
         self._fft_plot_y = np.linspace(0, 1, num_bins)

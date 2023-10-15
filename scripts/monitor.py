@@ -4,8 +4,9 @@ import plot
 # Initialise Serial
 ser = serial.Serial('/dev/ttyUSB1', 115200, timeout=1)
 
-# Initialise plot
-plotter = plot.RaydancePlotter(20, 1, 20)
+# Initialise plot to just display bars
+plotter = plot.RaydancePlotter()
+plotter.init_bars(20)
 
 
 while True:
