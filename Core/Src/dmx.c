@@ -174,7 +174,7 @@ static void dmx_task(void* params) {
                 continue;
 
             case dmx_STATE_FAILED:
-                static char dmx_failed_str[10] = "dmx: fail\n";
+                static char dmx_failed_str[10] = "[dmx] fail\n";
                 dmx_debug_log(dmx_failed_str, 10);
                 continue;
 
@@ -193,7 +193,7 @@ static void dmx_task(void* params) {
                     /* Create our debug string - We just print chars directly
                      * very quick and dirty. */
 					#define DEBUG_STRING_SIZE (5 + (DMX_NUM_CHANNELS*4))
-                    static char debug_string[DEBUG_STRING_SIZE] = "dmx: ";
+                    static char debug_string[DEBUG_STRING_SIZE] = "[dmx] ";
                     char * debug_string_ptr = debug_string + 5;
                     memset(debug_string_ptr, ' ', DEBUG_STRING_SIZE-5);
                     for (int i = 0; i < DMX_NUM_CHANNELS; i++) {

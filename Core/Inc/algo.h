@@ -5,15 +5,11 @@
 
 /* == CONFIGURATION ======================================================== */
 
-// #define ALGO_DEBUG_UART (huart5)
-#if defined ALGO_DEBUG_UART
-extern UART_HandleTypeDef ALGO_DEBUG_UART;
-#endif
-
 typedef enum ALGO_PrintType_e {
     ALGO_PRINT_TYPE_FFT_PROPERTIES = 0,
     ALGO_PRINT_TYPE_FREQ_BANDS,
     ALGO_PRINT_TYPE_PIPELINE_PROPERTIES,
+    ALGO_PRINT_TYPE_BAND_MAGS,
 
 }ALGO_PrintType;
 
@@ -27,6 +23,9 @@ typedef struct ALGO_FreqAnalysis_s {
     float min_freq;
     float max_freq;
     ALGO_FreqBand* freq_bands;
+    struct {
+        float* band_mags_f32;
+    }data;
     struct {
         float gain_dB;
         float contrast; // +/-1.0f
@@ -93,12 +92,13 @@ void ALGO_InitFreqAnalysis (ALGO_FreqAnalysis* freq_analysis);
  * @param freq_analysis [in] frequency analysis object
  * @param fft [in] Properties of the fft that produce the buffer
  * @param mag_buf [in] Buffer of magnitudes to perform analysis one per bin
- * @param results [out] Buffer of magnitudes produced by analysis, one per band
+ * @return Pointer to a buffer of band magnitudes produced by analysis. The 
+ * address returned allows easy access to the results which are actually
+ * stored as part of analysis object.
 */
-void ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
+float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
                            ALGO_FftProperties* fft,
-                           float* mag_buf,
-                           float* results);
+                           float* mag_buf);
 
 void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart);
 

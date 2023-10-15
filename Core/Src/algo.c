@@ -70,14 +70,16 @@ void ALGO_InitFreqAnalysis (ALGO_FreqAnalysis* freq_analysis) {
                          freq_analysis->max_freq, freq_analysis->num_bands);
 }
 
-void ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
+float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
                            ALGO_FftProperties* fft,
-                           float* mag_buf,
-                           float* results) {
+                           float* bin_mags) {
 
     float bin_freq = 0.0f;
     uint32_t band_index = 0;
     uint32_t bin_count = 0;
+
+    /* Store the results into the analysis band mags buffer */
+    float* results = freq_analysis->data.band_mags_f32; 
 
     /* Reset results buffer. */
     memset(results, 0, sizeof(float)*freq_analysis->num_bands);
@@ -93,7 +95,7 @@ void ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
                 results[band_index] = results[band_index] / bin_count;
                 bin_count = 0;
                 band_index++;
-                results[band_index] += mag_buf[i];
+                results[band_index] += bin_mags[i];
             /* ... If it does not exist then average down the final band and
              * exit the loop. */
             } else {
@@ -104,7 +106,7 @@ void ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
         /* If the frequency is within the current band then just accumulate. */
         else if (bin_freq >= band->start_freq 
            && bin_freq <= band->end_freq) {
-            results[band_index] += mag_buf[i];  
+            results[band_index] += bin_mags[i];  
         }
         
         /* Add bin range on each loop and update bin count. */
@@ -118,10 +120,12 @@ void ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
      * function allow you to adjust the mapping from lin->log such that we
      * exagerrate or minimize the variance */
     for (int i = 0; i < freq_analysis->num_bands; i++) {
-        mag_buf[i] = ApplyGain(mag_buf[i], freq_analysis->dynamic.gain_dB);
-        mag_buf[i] = ApplyLimit(mag_buf[i]);
-        mag_buf[i] = CalculateLogarithmicMagnitude(mag_buf[i], freq_analysis->dynamic.gain_dB);
+        results[i] = ApplyGain(results[i], freq_analysis->dynamic.gain_dB);
+        results[i] = ApplyLimit(results[i]);
+        // results[i] = CalculateLogarithmicMagnitude(results[i], freq_analysis->dynamic.gain_dB);
     }
+
+    return results;
 
 }
 
@@ -136,7 +140,7 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
         case ALGO_PRINT_TYPE_FFT_PROPERTIES:
             ALGO_FftProperties* fft_properties = (ALGO_FftProperties*)data;
             written = snprintf_(algo_print_buffer, PRINT_BUFFER_SIZE,
-                "Algo: FFT Properties \n"
+                "[algo_info] FFT Properties \n"
                 "\t fs: %dHz\n"
                 "\t bins: %d\n"
                 "\t resolution: %fHz\n"
@@ -146,7 +150,22 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
                 fft_properties->out.freq_resolution,
                 fft_properties->out.freq_precision);
             break;
-
+        
+        case ALGO_PRINT_TYPE_BAND_MAGS:
+            ALGO_FreqAnalysis* freq_analysis = (ALGO_FreqAnalysis*)data;
+            written = snprintf_(algo_print_buffer, PRINT_BUFFER_SIZE, "[algo]");
+            for (int i = 0; i < freq_analysis->num_bands; ++i) {
+                int offset = snprintf_(algo_print_buffer + written,
+                                       PRINT_BUFFER_SIZE - written,
+                                       " %.3f",
+                                       freq_analysis->data.band_mags_f32[i]);
+                written += offset;
+                if (offset < 0 || written >= PRINT_BUFFER_SIZE) {
+                    // Break out on error or overflow
+                    break;
+                }
+            }
+            break;
     }
 
     if (written < 0) {
@@ -158,6 +177,7 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
     } else {
         int pos = strlen(algo_print_buffer);
         algo_print_buffer[pos] = '\n';
+        written+=1;
     }
 
     HAL_StatusTypeDef s = HAL_UART_Transmit_DMA(huart, algo_print_buffer, written);

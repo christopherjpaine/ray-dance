@@ -90,8 +90,11 @@ audio_State audio_state = audio_STATE_AWAITING_BUFFER_A;
 
 arm_rfft_fast_instance_f32 audio_fft_instance;
 
-ALGO_FreqAnalysis audio_freq_analysis = {0};
 ALGO_FftProperties audio_fft_properties = {0};
+
+/* Algo Frequency Analysis Memory */
+ALGO_FreqAnalysis audio_freq_analysis = {0};
+static float audio_band_mags_f32[AUDIO_NUM_FREQ_BANDS] = {0.0f};
 
 /* == INTERFACE FUNCTIONS ================================================== */
 
@@ -161,6 +164,7 @@ static void audio_task(void* params) {
     audio_freq_analysis.min_freq = audio_MINIMUM_ANALYSIS_FREQUENCY;
     audio_freq_analysis.max_freq = audio_MAXIMUM_ANALYSIS_FREQUENCY;
     audio_freq_analysis.freq_bands = &freq_bands;
+    audio_freq_analysis.data.band_mags_f32 = audio_band_mags_f32;
     audio_freq_analysis.dynamic.gain_dB = 18.0f;
     audio_freq_analysis.dynamic.contrast = 0.5f;
     ALGO_InitFreqAnalysis(&audio_freq_analysis);
@@ -279,8 +283,6 @@ static float audio_m_f32_padded[AUDIO_FFT_SIZE] = {0.0f};
 static float audio_fft_f32[AUDIO_FFT_SIZE] = {0.0f};
 /* Magntiudes from fft */
 static float audio_mag_f32[audio_FFT_NUM_BINS] = {0.0f};
-/* Magnitude of bins from freq analysis */
-static float audio_band_mag_f32[AUDIO_NUM_FREQ_BANDS] = {0.0f};
 
 /* audio_lr - buffer of interleaved audio samples. */
 static void audio_Algorithm (int16_t *audio_lr) {
@@ -315,14 +317,17 @@ static void audio_Algorithm (int16_t *audio_lr) {
         float imag_squared = audio_fft_f32[(i*2)+1] * audio_fft_f32[(i*2)+1];
         audio_mag_f32[i] = sqrtf(real_squared + imag_squared) * scale_factor;
     }
+
+    // audio_DebugResults(audio_mag_f32, &AUDIO_DEBUG_UART);
     
-    audio_DebugResults(audio_mag_f32, &AUDIO_DEBUG_UART);
+    /* Run the Frequency Analysis and then print the resulting band magnitudes. */
+    float* band_mags = ALGO_RunFreqAnalysis(&audio_freq_analysis, &audio_fft_properties, 
+                         audio_mag_f32);
+    ALGO_Print(ALGO_PRINT_TYPE_BAND_MAGS, &audio_freq_analysis, &AUDIO_DEBUG_UART);
 
-    ALGO_RunFreqAnalysis(&audio_freq_analysis, &audio_fft_properties, 
-                         audio_mag_f32, audio_band_mag_f32);
-
+    /* Basic LED Animation to View Brightness */
     for (int i = 0; i < AUDIO_NUM_FREQ_BANDS; i++) {
-    	uint8_t red = 255 * audio_band_mag_f32[i];
+    	uint8_t red = 255 * band_mags[i];
         LED_SetPixel(i, red, 0, 0);
     }
     LED_Sync();
