@@ -12,6 +12,8 @@
 
 /* == CONFIGURATION ======================================================== */
 
+#define algo_MAX_COMPENSATION_GAIN  7.0f
+
 #define PRINT_BUFFER_SIZE   256
 
 /* == DEFINES ============================================================== */
@@ -22,6 +24,8 @@
 /* == FILE STATIC FUNCTIONS ================================================ */
 
 static void CalculateFreqRanges (ALGO_FreqBand* band_array, float min_freq, float max_freq, uint32_t num_ranges);
+static void AccumulateBands(ALGO_FreqAnalysis* analysis, ALGO_FftProperties* fft, float* bin_mags);
+static float BandingCompensationFactor (ALGO_FreqAnalysis* analysis, int band_index);
 static inline float ApplyGain(float input, float gain_dB);
 static inline float CalculateLogarithmicMagnitude(float linear_magnitude, float contrast);
 static inline float ApplyLimit (float input);
@@ -43,7 +47,7 @@ void ALGO_InitPipelineProperties (ALGO_PipelineProperties* pipeline) {
      * the pipeline properties run function multiple times. */
     pipeline->out.processing_latency_ms = 0.0f;
     pipeline->out.total_latency_ms = pipeline->out.buffer_latency_ms;
-    pipeline->out.processing_cpu_usage_percent;
+    // pipeline->out.processing_cpu_usage_percent;
 
 }
 
@@ -62,7 +66,7 @@ void ALGO_InitFftProperties (ALGO_FftProperties* fft) {
     /* Calculate the Frequency Precision. 
      * This is the frequency spacing of the resulting bins once you account for
      * the full input buffer including padding. Can be referred to as bin-range. */
-    fft->out.freq_precision = fft->init.sampling_rate / fft->init.fft_size;
+    fft->out.precision = fft->init.sampling_rate / fft->init.fft_size;
 
 }
 void ALGO_InitFreqAnalysis (ALGO_FreqAnalysis* freq_analysis) {
@@ -70,59 +74,23 @@ void ALGO_InitFreqAnalysis (ALGO_FreqAnalysis* freq_analysis) {
                          freq_analysis->max_freq, freq_analysis->num_bands);
 }
 
-float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
+float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* analysis,
                            ALGO_FftProperties* fft,
                            float* bin_mags) {
 
-    float bin_freq = 0.0f;
-    uint32_t band_index = 0;
-    uint32_t bin_count = 0;
+    AccumulateBands(analysis, fft, bin_mags);
 
-    /* Store the results into the analysis band mags buffer */
-    float* results = freq_analysis->data.band_mags_f32; 
-
-    /* Reset results buffer. */
-    memset(results, 0, sizeof(float)*freq_analysis->num_bands);
-
-    for (int i = 0; i < fft->out.num_bins; i++){
-        ALGO_FreqBand* band = &freq_analysis->freq_bands[band_index];
-        /* If bin freq is above current band, check there is a higher band... */
-        if (bin_freq > band->end_freq) {
-
-            /* ... If it exists then average down the current band and then start
-             * accumulating in the next one after resetting the bin count. */
-            if ((band_index+1) < freq_analysis->num_bands) {
-                results[band_index] = results[band_index] / bin_count;
-                bin_count = 0;
-                band_index++;
-                results[band_index] += bin_mags[i];
-            /* ... If it does not exist then average down the final band and
-             * exit the loop. */
-            } else {
-                results[band_index] = results[band_index] / bin_count;
-                break;
-            }   
-        }
-        /* If the frequency is within the current band then just accumulate. */
-        else if (bin_freq >= band->start_freq 
-           && bin_freq <= band->end_freq) {
-            results[band_index] += bin_mags[i];  
-        }
-        
-        /* Add bin range on each loop and update bin count. */
-        bin_freq += fft->out.freq_precision;
-        bin_count++;
-    }
+    float* results = analysis->data.band_mags_f32;
 
     /* TODO Apply smoothing filters */
 
     /* Apply gain and contrast parameters to band magnitudes. The contrast 
      * function allow you to adjust the mapping from lin->log such that we
      * exagerrate or minimize the variance */
-    for (int i = 0; i < freq_analysis->num_bands; i++) {
-        results[i] = ApplyGain(results[i], freq_analysis->dynamic.gain_dB);
+    for (int i = 0; i < analysis->num_bands; i++) {
+        results[i] = ApplyGain(results[i], analysis->dynamic.gain_dB);
         results[i] = ApplyLimit(results[i]);
-        // results[i] = CalculateLogarithmicMagnitude(results[i], freq_analysis->dynamic.gain_dB);
+        // results[i] = CalculateLogarithmicMagnitude(results[i], analysis->dynamic.gain_dB);
     }
 
     return results;
@@ -141,14 +109,14 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
             ALGO_FftProperties* fft_properties = (ALGO_FftProperties*)data;
             written = snprintf_(algo_print_buffer, PRINT_BUFFER_SIZE,
                 "[algo_info] FFT Properties \n"
-                "\t fs: %dHz\n"
-                "\t bins: %d\n"
+                "\t fs: %uHz\n"
+                "\t bins: %u\n"
                 "\t resolution: %fHz\n"
                 "\t precision: %fHz\n",
                 fft_properties->init.sampling_rate,
                 fft_properties->out.num_bins,
                 fft_properties->out.freq_resolution,
-                fft_properties->out.freq_precision);
+                fft_properties->out.precision);
             break;
         
         case ALGO_PRINT_TYPE_BAND_MAGS:
@@ -180,11 +148,80 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
         written+=1;
     }
 
-    HAL_StatusTypeDef s = HAL_UART_Transmit_DMA(huart, algo_print_buffer, written);
+    HAL_StatusTypeDef s = HAL_UART_Transmit_DMA(huart, (uint8_t*)algo_print_buffer, written);
     if (HAL_OK != s) {
     	__BKPT();
     }
     
+}
+
+/**
+ * @brief Accumulates band magnitudes from FFT bin magnitudes.
+ *
+ * This function accumulates band magnitudes from FFT output bins considering the specified frequency bands 
+ * and compensation factors.
+ *
+ * @param analysis Pointer to the ALGO_FreqAnalysis instance.
+ * @param fft Pointer to the ALGO_FftProperties instance that produced the bin_mags.
+ * @param bin_mags Array of FFT bin magnitudes.
+ */
+static void AccumulateBands(ALGO_FreqAnalysis* analysis, ALGO_FftProperties* fft, float* bin_mags) {
+    int num_bins = fft->out.num_bins;
+    int num_bands = analysis->num_bands;
+    float* results = analysis->data.band_mags_f32;
+    results[0] = 0.0f;
+    float bin_freq = 0;
+    int band_index = 0;
+    int bin_count = 0;
+    float band_comp = BandingCompensationFactor(analysis, band_index);
+
+    for (int i = 0; i < num_bins; ++i) {
+        float band_start_freq = analysis->freq_bands[band_index].start_freq;
+        float band_end_freq = analysis->freq_bands[band_index].end_freq;
+
+        // If the frequency is within the current band, accumulate
+        if (band_start_freq <= bin_freq && bin_freq <= band_end_freq) {
+            results[band_index] += bin_mags[i] * band_comp;
+        }
+
+        // If bin freq is above current band, average the current band and set up the next one
+        else if (bin_freq > band_end_freq) {
+            results[band_index] /= bin_count;
+            bin_count = 0;
+            if (band_index + 1 < num_bands) {
+                band_index++;
+                band_comp = BandingCompensationFactor(analysis, band_index);  // Recalculate for the next band
+                results[band_index] = bin_mags[i] * band_comp;
+            } else {
+                break;
+            }
+        }
+
+        // Add bin range on each loop
+        bin_freq += fft->out.precision;
+        ++bin_count;
+    }
+
+    // Catch the case that the freq_ranges is greater than that of the fft
+    if (bin_freq < analysis->freq_bands[num_bands - 1].end_freq) {
+        results[band_index] /= bin_count;
+    }
+}
+
+/**
+ * @brief Calculate the bands compensation factor based on the selected compensation gain.
+ *
+ * The compensation factor is calculated using the generic exponential form: y = a * exp(b * x),
+ * where x is the band's normalized value and b is the compensation gain.
+ *
+ * @param analysis Pointer to the ALGO_FreqAnalysis instance.
+ * @param band_index Index of the band for which the compensation factor is calculated.
+ * @return The calculated compensation factor for the specified band.
+ */
+static float BandingCompensationFactor (ALGO_FreqAnalysis* analysis, int band_index) {
+    float b = analysis->dynamic.band_compensation * algo_MAX_COMPENSATION_GAIN;
+    float x = (float)band_index / analysis->num_bands;
+    return expf(b * x);
 }
 
 static void CalculateFreqRanges (ALGO_FreqBand* band_array, float min_freq, float max_freq, uint32_t num_ranges) {

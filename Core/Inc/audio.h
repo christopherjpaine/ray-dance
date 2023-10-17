@@ -14,7 +14,7 @@ extern UART_HandleTypeDef AUDIO_DEBUG_UART;
 #endif
 
 /* Number of Frequency Bands */
-#define AUDIO_NUM_FREQ_BANDS        (20)
+#define AUDIO_NUM_FREQ_BANDS        (9)
 
 /* Buffer Size */
 #define AUDIO_BUFFER_SAMPLES_PER_CHANNEL	1024U

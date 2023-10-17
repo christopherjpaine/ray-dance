@@ -166,7 +166,8 @@ static void audio_task(void* params) {
     audio_freq_analysis.freq_bands = &freq_bands;
     audio_freq_analysis.data.band_mags_f32 = audio_band_mags_f32;
     audio_freq_analysis.dynamic.gain_dB = 18.0f;
-    audio_freq_analysis.dynamic.contrast = 0.5f;
+    audio_freq_analysis.dynamic.contrast = 0.0f;
+    audio_freq_analysis.dynamic.band_compensation = 0.0f;
     ALGO_InitFreqAnalysis(&audio_freq_analysis);
 
     ALGO_PipelineProperties pipeline = {

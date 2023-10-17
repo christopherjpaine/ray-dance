@@ -28,6 +28,7 @@ typedef struct ALGO_FreqAnalysis_s {
     }data;
     struct {
         float gain_dB;
+        float band_compensation; // 0.0f to 1.0f
         float contrast; // +/-1.0f
     }dynamic;
 }ALGO_FreqAnalysis;
@@ -41,7 +42,7 @@ typedef struct ALGO_FftProperties_s {
     struct {
         uint32_t num_bins; // fft_size/2 (as we discard the bin at exactly nyquist.)
         float freq_resolution;  // sampling_rate/samples_per_buffer
-        float freq_precision;   // AKA bin range. sampling_rate/ff_size
+        float precision;   // AKA bin range. sampling_rate/ff_size
     }out;
 }ALGO_FftProperties;
 
