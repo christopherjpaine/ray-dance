@@ -47,7 +47,8 @@ typedef struct ALGO_FreqAnalysis_s {
     }calc;
     struct {
         float* band_mags_f32;
-        ALGO_SmoothingFilter* smoothers;
+        float* smoothed_band_mags_f32;
+        ALGO_SmoothingFilter* smoothing_filters;
     }data;
     struct {
         float gain_dB;

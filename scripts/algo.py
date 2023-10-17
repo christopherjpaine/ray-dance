@@ -81,7 +81,7 @@ class FreqAnalyser:
         self.analysis = self.Analysis(num_bands, min_freq, max_freq, frame_rate)
 
         # Dynamic params
-        self.params = self.Params(gain_dB=12, contrast=-0.9, compensation=0.0)
+        self.params = self.Params(gain_dB=12, contrast=-0.9, compensation=0.6)
 
         # Plotting
         if plot is True:
@@ -259,7 +259,7 @@ class FreqAnalyser:
         self.results = self.band_mags
 
         for i in range(self.analysis.num_bands):
-            # self.results[i] = self._apply_smoothing(self.results[i], self.analysis.band_filters[i])
+            self.results[i] = self._apply_smoothing(self.results[i], self.analysis.band_filters[i])
             self.results[i] = self._apply_gain(self.band_mags[i])
             self.results[i] = self._apply_limit(self.results[i])
             # self.results[i] = self._calculate_logarithmic_magnitude(self.results[i])

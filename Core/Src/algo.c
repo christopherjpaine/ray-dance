@@ -30,6 +30,7 @@ static void InitialiseSmoothingFilters (ALGO_FreqAnalysis* analysis);
 /* Processing */
 static void AccumulateBands(ALGO_FreqAnalysis* analysis, ALGO_FftProperties* fft, float* bin_mags);
 static float BandingCompensationFactor (ALGO_FreqAnalysis* analysis, int band_index);
+static void ApplySmoothing (ALGO_FreqAnalysis* analysis);
 static inline float ApplyGain(float input, float gain_dB);
 static inline float CalculateLogarithmicMagnitude(float linear_magnitude, float contrast);
 static inline float ApplyLimit (float input);
@@ -86,7 +87,12 @@ float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* analysis,
 
     AccumulateBands(analysis, fft, bin_mags);
 
+#if 1 // smoothing off
     float* results = analysis->data.band_mags_f32;
+#else // smoothing on
+    ApplySmoothing(analysis);
+    float* results = analysis->data.smoothed_band_mags_f32;
+#endif
 
     /* TODO Apply smoothing filters */
 
@@ -284,6 +290,21 @@ static void InitialiseSmoothingFilters (ALGO_FreqAnalysis* analysis) {
                                          &analysis->dynamic.smoothing_coeffs,
                                          &analysis->data.smoothers[i].states);
     }
+}
+
+static void ApplySmoothing (ALGO_FreqAnalysis* analysis) {
+    float* sources = analysis->data.band_mags_f32;
+    float* results = analysis->data.smoothed_band_mags_f32;
+    ALGO_SmoothingFilter* filters = analysis->data.smoothing_filters;
+    
+    /* Run the filter on a single sample for each band. */
+    for (int i = 0; i < analysis->num_bands; i++) {
+        arm_biquad_cascade_df2T_f32(&filters[i].inst,
+                                    &sources[i],
+                                    &results[i],
+                                    1);
+    }
+    
 }
 
 static inline float ApplyGain(float input, float gain_dB) {
