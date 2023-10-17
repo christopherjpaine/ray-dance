@@ -6,7 +6,7 @@ ser = serial.Serial('/dev/ttyUSB1', 115200, timeout=1)
 
 # Initialise plot to just display bars
 plotter = plot.RaydancePlotter()
-plotter.init_bars(20)
+plotter.init_bars(9)
 
 
 while True:

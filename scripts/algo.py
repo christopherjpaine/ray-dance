@@ -64,11 +64,8 @@ class FreqAnalyser:
             contrast_sensitivity=3
             self.contrast_exponent = pow(2, (contrast*contrast_sensitivity) +contrast_offset)
             # Compensate for the averaging out of higher frequencies due to band sizing.
-            # Input value should be between 0 and 1. The compensation factor f is applied
-            # applied across the bands where x ranges from 0 to 1 and c is the comp exponent.
-            # f = exp(cx-c)
-            max_compensation_exponent = 7
-            self.compensation_exponent = compensation * max_compensation_exponent
+            # Input value should be between 0 and 1
+            self.compensation = compensation
         
     def __init__(self, 
                  buffer_size=1024, 
@@ -84,7 +81,7 @@ class FreqAnalyser:
         self.analysis = self.Analysis(num_bands, min_freq, max_freq, frame_rate)
 
         # Dynamic params
-        self.params = self.Params(gain_dB=12, contrast=-0.9, compensation=1)
+        self.params = self.Params(gain_dB=12, contrast=-0.9, compensation=0.0)
 
         # Plotting
         if plot is True:
@@ -159,8 +156,12 @@ class FreqAnalyser:
     def _banding_compensation_factor(self, band_index):
         # Calculate the bands compensation factor based on our selected 
         # compensation exponent.
-        b = band_index/self.analysis.num_bands
-        return math.exp(b*self.params.compensation_exponent)
+        # The factor is calculated using the generic exp form: y = a * exp(b*x)
+        # where x is the bands normalised value and b is the compensation gain
+        max_gain = 7
+        b = self.params.compensation*max_gain
+        x = band_index/self.analysis.num_bands
+        return math.exp(b*x)
         
     def _apply_gain(self, input):
         # Convert dB gain to linear scale and apply gain to the input
@@ -250,17 +251,18 @@ class FreqAnalyser:
 
 
     def analyse(self, input_signal):
-        self.windowed = self._apply_window(input_signal)
-        self.bin_mags = self._fft(self.windowed)
+        self.bin_mags = self._fft(input_signal)
+        # self.windowed = self._apply_window(input_signal)
+        # self.bin_mags = self._fft(self.windowed)
         self.band_mags = self._banding(self.bin_mags)
 
         self.results = self.band_mags
 
         for i in range(self.analysis.num_bands):
-            self.results[i] = self._apply_smoothing(self.results[i], self.analysis.band_filters[i])
+            # self.results[i] = self._apply_smoothing(self.results[i], self.analysis.band_filters[i])
             self.results[i] = self._apply_gain(self.band_mags[i])
             self.results[i] = self._apply_limit(self.results[i])
-            self.results[i] = self._calculate_logarithmic_magnitude(self.results[i])
+            # self.results[i] = self._calculate_logarithmic_magnitude(self.results[i])
 
         self._update_plot(0)
 
