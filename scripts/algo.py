@@ -121,27 +121,28 @@ class FreqAnalyser:
         return magnitude_spectrum[:-1]
 
     def _banding(self, bin_mags):
-        num_bins = self.fft.num_bins # len(bin_mags)
+        num_bins = self.fft.num_bins
         results = [0.0] * self.analysis.num_bands
         bin_freq = 0
         band_index = 0
         bin_count = 0
+        band_comp = self._banding_compensation_factor(band_index)  # Initial calculation
 
         for i in range(num_bins):
             band_start_freq, band_end_freq = self.analysis.freq_bands[band_index]
 
             # If the frequency is within the current band, accumulate
             if band_start_freq <= bin_freq <= band_end_freq:
-                results[band_index] += bin_mags[i] * self._banding_compensation_factor(band_index)
+                results[band_index] += bin_mags[i] * band_comp
 
-            # If bin freq is above current band average the current band and
-            # set up the next one
+            # If bin freq is above the current band, average the current band and set up the next one
             elif bin_freq > band_end_freq:
                 results[band_index] /= bin_count
                 bin_count = 0
-                if (band_index+1) < self.analysis.num_bands:
+                if (band_index + 1) < self.analysis.num_bands:
                     band_index += 1
-                    results[band_index] = bin_mags[i] * self._banding_compensation_factor(band_index)
+                    band_comp = self._banding_compensation_factor(band_index)  # Recalculate for the next band
+                    results[band_index] = bin_mags[i] * band_comp
                 else:
                     break
 
