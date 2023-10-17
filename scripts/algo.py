@@ -41,10 +41,10 @@ class FreqAnalyser:
 
             return band_array
         
-        def _create_filters(self, num_bands, frame_rate, normal_cutoff):
+        def _create_filters(self, num_bands, frame_rate, cutoff_Hz):
             band_filters = []
             for i in range(num_bands):
-                band_filters.append(filter.LowPassFilter(frame_rate, normal_cutoff))
+                band_filters.append(filter.LowPassFilter(frame_rate, cutoff_Hz))
 
             return band_filters
 

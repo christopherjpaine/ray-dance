@@ -10,9 +10,8 @@ class LowPassFilter:
         self.zi = np.zeros(max(len(self.a), len(self.b)) - 1)
 
     def create_filter(self):
-        nyquist = 0.5 * self.sampling_rate
-        normal_cutoff = self.cutoff_frequency / nyquist
-        b, a = butter(N=4, Wn=normal_cutoff, btype='low', analog=False, output='ba')
+        normal_cutoff = self.cutoff_frequency / self.sampling_rate
+        b, a = butter(N=2, Wn=normal_cutoff, btype='low', analog=False, output='ba')
         return b, a
 
     def run(self, sample):
@@ -32,15 +31,18 @@ class LowPassFilter:
 
 if __name__ == "__main__":
     # Example usage
-    channels = ['channel1', 'channel2', 'channel3']
     sampling_rate = 1000  # Sample rate in Hz
     cutoff_frequency = 1  # Cutoff frequency in Hz
     rolloff = 0.5
 
     # Create an array of filter objects
-    filters = [LowPassFilter(sampling_rate, cutoff_frequency, rolloff) for _ in channels]
+    filter = LowPassFilter(sampling_rate, cutoff_frequency)
 
     # Plot frequency response for a specific filter
     filter_index_to_plot = 0
-    b, a = filters[filter_index_to_plot].create_filter()
-    filters[filter_index_to_plot].plot_frequency_response(b, a)
+    b, a = filter.create_filter()
+    a = [1, 1.4312, -0.5604]
+    b= [ 0.0323, 0.0646, 0.032303]
+    
+    filter.plot_frequency_response(b, a)
+    
