@@ -23,7 +23,11 @@
 
 /* == FILE STATIC FUNCTIONS ================================================ */
 
+/* Calculating */
 static void CalculateFreqRanges (ALGO_FreqBand* band_array, float min_freq, float max_freq, uint32_t num_ranges);
+static void InitialiseSmoothingFilters (ALGO_FreqAnalysis* analysis);
+
+/* Processing */
 static void AccumulateBands(ALGO_FreqAnalysis* analysis, ALGO_FftProperties* fft, float* bin_mags);
 static float BandingCompensationFactor (ALGO_FreqAnalysis* analysis, int band_index);
 static inline float ApplyGain(float input, float gain_dB);
@@ -72,6 +76,8 @@ void ALGO_InitFftProperties (ALGO_FftProperties* fft) {
 void ALGO_InitFreqAnalysis (ALGO_FreqAnalysis* freq_analysis) {
     CalculateFreqRanges (freq_analysis->freq_bands, freq_analysis->min_freq, 
                          freq_analysis->max_freq, freq_analysis->num_bands);
+    InitialiseSmoothingFilters(freq_analysis);
+    freq_analysis->calc.frame_rate_Hz = freq_analysis->sampling_rate_Hz/freq_analysis->buffer_size;
 }
 
 float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* analysis,
@@ -94,6 +100,34 @@ float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* analysis,
     }
 
     return results;
+
+}
+
+void ALGO_CalculateSmoothingCoeffs (ALGO_FreqAnalysis* analysis, float cutoff_Hz, ALGO_SmoothingCoeffs* dest) {
+
+    /* Setup to calculate Butterworth Lowpass at fc */
+    float normalized_fc = cutoff_Hz/analysis->calc.frame_rate_Hz;
+    const float butterworthQ = 0.70710678118;
+    float w0 = 2.0 * M_PI * normalized_fc;
+    float alpha = arm_sin_f32(w0) / (2.0 * butterworthQ);
+
+    /* Compute Coefficients */
+    dest->b0 = (1.0 - arm_cos_f32(w0)) / 2.0;
+    dest->b1 = 1.0 - arm_cos_f32(w0);
+    dest->b2 = (1.0 - arm_cos_f32(w0)) / 2.0;
+    float a0 = 1.0 + alpha;
+    dest->a1 = -2.0 * arm_cos_f32(w0);
+    dest->a2 = 1.0 - alpha;
+
+    /* Normalise such that a0 = 1. Taking into consideration that the 
+     * a1 and a2 coefficients must be negated to work in the direct form 2
+     * CMSIS implementation. */
+    float normFactor = 1.0 / a0;
+    dest->b0 *= normFactor;
+    dest->b1 *= normFactor;
+    dest->b2 *= normFactor;
+    dest->a1 *= -normFactor;
+    dest->a2 *= -normFactor;
 
 }
 
@@ -235,6 +269,20 @@ static void CalculateFreqRanges (ALGO_FreqBand* band_array, float min_freq, floa
          * logarithmic function. */
         band_array[i].start_freq = min_freq * exp(i * s);
         band_array[i].end_freq = min_freq * exp((i + 1) * s);
+    }
+}
+
+static void InitialiseSmoothingFilters (ALGO_FreqAnalysis* analysis) {
+    /* Calculate filter params for arbitrary cutoff (20Hz will be close to off)*/
+    ALGO_CalculateSmoothingCoeffs(analysis, 20, &analysis->dynamic.smoothing_coeffs);
+
+    /* For each band initialise a smoother and point it at the coeffs in our 
+    * analysis dynamic properties. */
+    for (int i = 0; i < analysis->num_bands; i++) {
+        arm_biquad_cascade_df2T_init_f32(&analysis->data.smoothers[i].inst,
+                                         1, // Single stage
+                                         &analysis->dynamic.smoothing_coeffs,
+                                         &analysis->data.smoothers[i].states);
     }
 }
 

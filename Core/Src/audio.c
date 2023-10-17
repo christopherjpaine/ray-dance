@@ -95,6 +95,7 @@ ALGO_FftProperties audio_fft_properties = {0};
 /* Algo Frequency Analysis Memory */
 ALGO_FreqAnalysis audio_freq_analysis = {0};
 static float audio_band_mags_f32[AUDIO_NUM_FREQ_BANDS] = {0.0f};
+static ALGO_SmoothingFilter audio_smoothers[AUDIO_NUM_FREQ_BANDS] = {0};
 
 /* == INTERFACE FUNCTIONS ================================================== */
 
@@ -163,8 +164,11 @@ static void audio_task(void* params) {
     audio_freq_analysis.num_bands = AUDIO_NUM_FREQ_BANDS;
     audio_freq_analysis.min_freq = audio_MINIMUM_ANALYSIS_FREQUENCY;
     audio_freq_analysis.max_freq = audio_MAXIMUM_ANALYSIS_FREQUENCY;
+    audio_freq_analysis.sampling_rate_Hz = audio_SAMPLE_RATE_Hz;
+    audio_freq_analysis.buffer_size = AUDIO_BUFFER_SAMPLES_PER_CHANNEL;
     audio_freq_analysis.freq_bands = &freq_bands;
     audio_freq_analysis.data.band_mags_f32 = audio_band_mags_f32;
+    audio_freq_analysis.data.smoothers = audio_smoothers;
     audio_freq_analysis.dynamic.gain_dB = 18.0f;
     audio_freq_analysis.dynamic.contrast = 0.0f;
     audio_freq_analysis.dynamic.band_compensation = 0.0f;
