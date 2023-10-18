@@ -161,6 +161,7 @@ static void audio_task(void* params) {
     ALGO_Print(ALGO_PRINT_TYPE_FFT_PROPERTIES, &audio_fft_properties, &AUDIO_DEBUG_UART);
     osDelay(100); // print delay
 
+    /* Initialise the Analysis Object */
     ALGO_FreqBand freq_bands[AUDIO_NUM_FREQ_BANDS] = {0};
     audio_freq_analysis.num_bands = AUDIO_NUM_FREQ_BANDS;
     audio_freq_analysis.min_freq = audio_MINIMUM_ANALYSIS_FREQUENCY;
@@ -171,10 +172,17 @@ static void audio_task(void* params) {
     audio_freq_analysis.data.band_mags_f32 = audio_band_mags_f32;
     audio_freq_analysis.data.smoothed_band_mags_f32 = audio_smoothed_band_mags_f32;
     audio_freq_analysis.data.smoothing_filters = audio_smoothing_filters;
-    audio_freq_analysis.dynamic.gain_dB = 24.0f;
+    ALGO_InitFreqAnalysis(&audio_freq_analysis);
+
+    /* After initialising the analysis object set it's dynamic parameters */
+    audio_freq_analysis.dynamic.gain_dB = 12.0f;
     audio_freq_analysis.dynamic.contrast = 0.0f;
     audio_freq_analysis.dynamic.band_compensation = 0.6f;
-    ALGO_InitFreqAnalysis(&audio_freq_analysis);
+    // TODO Set smoothing coeffs
+
+    /* Print any Analysis Init Info */
+    ALGO_Print(ALGO_PRINT_TYPE_COEFFS, &audio_freq_analysis, &AUDIO_DEBUG_UART);
+    osDelay(100); // Print delay
 
     ALGO_PipelineProperties pipeline = {
         .init = {

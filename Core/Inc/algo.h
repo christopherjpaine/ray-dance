@@ -12,6 +12,7 @@ typedef enum ALGO_PrintType_e {
     ALGO_PRINT_TYPE_FREQ_BANDS,
     ALGO_PRINT_TYPE_PIPELINE_PROPERTIES,
     ALGO_PRINT_TYPE_BAND_MAGS,
+    ALGO_PRINT_TYPE_COEFFS
 
 }ALGO_PrintType;
 
@@ -48,6 +49,7 @@ typedef struct ALGO_FreqAnalysis_s {
     struct {
         float* band_mags_f32;
         float* smoothed_band_mags_f32;
+        float* band_mag_results_f32;
         ALGO_SmoothingFilter* smoothing_filters;
     }data;
     struct {

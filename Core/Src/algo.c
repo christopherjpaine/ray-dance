@@ -12,6 +12,8 @@
 
 /* == CONFIGURATION ======================================================== */
 
+#define algo_ENABLE_SMOOTHING 1
+
 #define algo_MAX_COMPENSATION_GAIN  7.0f
 
 #define PRINT_BUFFER_SIZE   256
@@ -75,10 +77,18 @@ void ALGO_InitFftProperties (ALGO_FftProperties* fft) {
 
 }
 void ALGO_InitFreqAnalysis (ALGO_FreqAnalysis* freq_analysis) {
+    /* Set the calculated parameters. */
+	freq_analysis->calc.frame_rate_Hz = freq_analysis->sampling_rate_Hz/freq_analysis->buffer_size;
+    // TODO freq bands should be under the calc subheading?
+    // Maybe one day even dynamic!
     CalculateFreqRanges (freq_analysis->freq_bands, freq_analysis->min_freq, 
                          freq_analysis->max_freq, freq_analysis->num_bands);
-    InitialiseSmoothingFilters(freq_analysis);
-    freq_analysis->calc.frame_rate_Hz = freq_analysis->sampling_rate_Hz/freq_analysis->buffer_size;
+
+    /* Initialise internal objects. */
+    InitialiseSmoothingFilters(freq_analysis); // This also sets default coeffs.
+
+    /* TODO Initialise dynamic params to defaults. */
+
 }
 
 float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* analysis,
@@ -87,11 +97,11 @@ float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* analysis,
 
     AccumulateBands(analysis, fft, bin_mags);
 
-#if 1 // smoothing off
-    float* results = analysis->data.band_mags_f32;
-#else // smoothing on
+#if algo_ENABLE_SMOOTHING==1 // smoothing off
     ApplySmoothing(analysis);
-    float* results = analysis->data.smoothed_band_mags_f32;
+    float* band_mags = analysis->data.smoothed_band_mags_f32;
+#else
+    float* band_mags = analysis->data.band_mags_f32;
 #endif
 
     /* TODO Apply smoothing filters */
@@ -100,12 +110,13 @@ float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* analysis,
      * function allow you to adjust the mapping from lin->log such that we
      * exagerrate or minimize the variance */
     for (int i = 0; i < analysis->num_bands; i++) {
-        results[i] = ApplyGain(results[i], analysis->dynamic.gain_dB);
-        results[i] = ApplyLimit(results[i]);
-        // results[i] = CalculateLogarithmicMagnitude(results[i], analysis->dynamic.gain_dB);
+        band_mags[i] = ApplyGain(band_mags[i], analysis->dynamic.gain_dB);
+        band_mags[i] = ApplyLimit(band_mags[i]);
+        // band_mags[i] = CalculateLogarithmicMagnitude(band_mags[i], analysis->dynamic.gain_dB);
     }
 
-    return results;
+    analysis->data.band_mag_results_f32 = band_mags;
+    return band_mags;
 
 }
 
@@ -143,6 +154,7 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
     }
 
     int written = 0;
+    ALGO_FreqAnalysis* freq_analysis = (ALGO_FreqAnalysis*)data;
 
     switch (type) {
         case ALGO_PRINT_TYPE_FFT_PROPERTIES:
@@ -160,19 +172,28 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
             break;
         
         case ALGO_PRINT_TYPE_BAND_MAGS:
-            ALGO_FreqAnalysis* freq_analysis = (ALGO_FreqAnalysis*)data;
             written = snprintf_(algo_print_buffer, PRINT_BUFFER_SIZE, "[algo]");
             for (int i = 0; i < freq_analysis->num_bands; ++i) {
                 int offset = snprintf_(algo_print_buffer + written,
                                        PRINT_BUFFER_SIZE - written,
                                        " %.3f",
-                                       freq_analysis->data.band_mags_f32[i]);
+                                       freq_analysis->data.band_mag_results_f32[i]);
                 written += offset;
                 if (offset < 0 || written >= PRINT_BUFFER_SIZE) {
                     // Break out on error or overflow
                     break;
                 }
             }
+            break;
+
+        case ALGO_PRINT_TYPE_COEFFS:
+            written = snprintf_(algo_print_buffer, PRINT_BUFFER_SIZE,
+                                "[coeffs] %.4f %.4f %.4f %.4f %4f",
+                                freq_analysis->dynamic.smoothing_coeffs.b0,
+                                freq_analysis->dynamic.smoothing_coeffs.b1,
+                                freq_analysis->dynamic.smoothing_coeffs.b2,
+                                freq_analysis->dynamic.smoothing_coeffs.a1,
+                                freq_analysis->dynamic.smoothing_coeffs.a2);
             break;
     }
 
@@ -279,16 +300,16 @@ static void CalculateFreqRanges (ALGO_FreqBand* band_array, float min_freq, floa
 }
 
 static void InitialiseSmoothingFilters (ALGO_FreqAnalysis* analysis) {
-    /* Calculate filter params for arbitrary cutoff (20Hz will be close to off)*/
-    ALGO_CalculateSmoothingCoeffs(analysis, 20, &analysis->dynamic.smoothing_coeffs);
+    /* Set default smoothing coefficients */
+    ALGO_CalculateSmoothingCoeffs(analysis, 1.5, &analysis->dynamic.smoothing_coeffs);
 
     /* For each band initialise a smoother and point it at the coeffs in our 
     * analysis dynamic properties. */
     for (int i = 0; i < analysis->num_bands; i++) {
-        arm_biquad_cascade_df2T_init_f32(&analysis->data.smoothers[i].inst,
+        arm_biquad_cascade_df2T_init_f32(&analysis->data.smoothing_filters[i].inst,
                                          1, // Single stage
                                          &analysis->dynamic.smoothing_coeffs,
-                                         &analysis->data.smoothers[i].states);
+                                         &analysis->data.smoothing_filters[i].states);
     }
 }
 

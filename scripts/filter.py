@@ -31,8 +31,8 @@ class LowPassFilter:
 
 if __name__ == "__main__":
     # Example usage
-    sampling_rate = 1000  # Sample rate in Hz
-    cutoff_frequency = 1  # Cutoff frequency in Hz
+    sampling_rate = 40  # Sample rate in Hz
+    cutoff_frequency = 1.5  # Cutoff frequency in Hz
     rolloff = 0.5
 
     # Create an array of filter objects
@@ -41,8 +41,5 @@ if __name__ == "__main__":
     # Plot frequency response for a specific filter
     filter_index_to_plot = 0
     b, a = filter.create_filter()
-    a = [1, 1.4312, -0.5604]
-    b= [ 0.0323, 0.0646, 0.032303]
-    
     filter.plot_frequency_response(b, a)
     
