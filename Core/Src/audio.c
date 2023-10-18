@@ -57,6 +57,7 @@ typedef enum audio_Event_e {
     audio_EVENT_NONE,
     audio_EVENT_BUFFER_A_READY,
     audio_EVENT_BUFFER_B_READY,
+    audio_EVENT_PARAMS_UPDATE,
 }audio_Event;
 
 typedef enum audio_State_e {
@@ -87,6 +88,9 @@ static SAI_HandleTypeDef* audio_input_sai = NULL;
 static SAI_HandleTypeDef* audio_output_sai = NULL; 
 
 audio_State audio_state = audio_STATE_AWAITING_BUFFER_A;
+
+static uint8_t audio_params_pending_flag = 0;
+ALGO_DynamicParams audio_algo_params_pending = {0};
 
 arm_rfft_fast_instance_f32 audio_fft_instance;
 
@@ -141,6 +145,30 @@ void AUDIO_Start (void) {
         .name = "audio",
     };
     audio_queue_handle = osMessageQueueNew (3, sizeof(audio_Event), &queue_params);
+
+}
+
+void AUDIO_UpdateParams(AUDIO_DynamicParams* dynamic) {
+    /* If dynamic pending flag is set return immediately. */
+    if (audio_params_pending_flag) {
+        return;
+    }
+
+    /* Convert Audio Dynamics into ALGO dynamics. */
+    audio_algo_params_pending.gain_dB = dynamic->gain_dB;
+    audio_algo_params_pending.band_compensation = dynamic->band_compensation;
+    audio_algo_params_pending.contrast = dynamic->contrast;
+    ALGO_CalculateSmoothingCoeffs(&audio_freq_analysis, dynamic->smoothing_factor, &audio_algo_params_pending.smoothing_coeffs);
+
+    /* Set dynamics pending flag. */
+    audio_params_pending_flag = 1;
+
+    /* Post to event queue. */
+    audio_Event event = audio_EVENT_PARAMS_UPDATE;
+    osStatus_t s = osMessageQueuePut (audio_queue_handle, &event, 0, 0);
+    if (s != osOK) {
+        __BKPT();
+    }
 
 }
 
@@ -243,7 +271,14 @@ static void audio_task(void* params) {
                 /* Set state to awating Buffer A */
                 audio_state = audio_STATE_AWAITING_BUFFER_A;
                 continue;
+
+            case audio_EVENT_PARAMS_UPDATE:
+                /* Reconfigure algorithm parameters and then clear the update pending flag. */
+                ALGO_UpdateFreqAnalysis(&audio_freq_analysis, &audio_algo_params_pending);
+                audio_params_pending_flag = 0;
+                continue;
         }
+        /* Code here will not execute. */
     }
 
 }

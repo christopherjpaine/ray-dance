@@ -24,13 +24,23 @@ extern UART_HandleTypeDef AUDIO_DEBUG_UART;
  * a decent amount of padding. However it must align to a power of 2. */
 #define AUDIO_FFT_SIZE 2048U
 
-/* System Clock Rate 
- * provide a */
+/* System Clock Rate */
 #define AUDIO_CORE_CLOCK_Hz SystemCoreClock
 extern uint32_t SystemCoreClock;
+
+/* == TYPES ================================================================ */
+
+typedef struct AUDIO_DynamicParams_s {
+    float gain_dB;
+    float band_compensation; // 0.0f to 1.0f
+    float contrast; // +/-1.0f
+    float smoothing_factor; // 0.0 to 1.0f
+}AUDIO_DynamicParams;
 
 /* == INTERFACE FUNCTIONS ================================================== */
 
 void AUDIO_Init(SAI_HandleTypeDef* input_sai, SAI_HandleTypeDef* output_sai);
 
 void AUDIO_Start (void);
+
+void AUDIO_UpdateParams(AUDIO_DynamicParams* dynamic);

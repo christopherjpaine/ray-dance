@@ -36,6 +36,13 @@ typedef struct ALGO_SmoothingCoeffs_s{
     float32_t a2; 
 }ALGO_SmoothingCoeffs;
 
+typedef struct ALGO_DynamicParams_s{
+    float gain_dB;
+    float band_compensation; // 0.0f to 1.0f
+    float contrast; // +/-1.0f
+    ALGO_SmoothingCoeffs smoothing_coeffs; // Calculated using ALGO_CalculateSmoothingCoeffs
+} ALGO_DynamicParams;
+
 typedef struct ALGO_FreqAnalysis_s {
     uint32_t num_bands;
     float min_freq;
@@ -52,12 +59,7 @@ typedef struct ALGO_FreqAnalysis_s {
         float* band_mag_results_f32;
         ALGO_SmoothingFilter* smoothing_filters;
     }data;
-    struct {
-        float gain_dB;
-        float band_compensation; // 0.0f to 1.0f
-        float contrast; // +/-1.0f
-        ALGO_SmoothingCoeffs smoothing_coeffs; // Calculated using ALGO_CalculateSmoothingCoeffs
-    }dynamic;
+    ALGO_DynamicParams dynamic;
 }ALGO_FreqAnalysis;
 
 typedef struct ALGO_FftProperties_s {
@@ -128,16 +130,20 @@ float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* freq_analysis,
                            ALGO_FftProperties* fft,
                            float* mag_buf);
 
+
+void ALGO_UpdateFreqAnalysis (ALGO_FreqAnalysis* analysis, ALGO_DynamicParams* dynamic);
+
 /** 
  * @brief Calculate smoothing filter coeffs.
  * 
- * Given a coefficients buffer and a cutoff frequency in Hz this function 
+ * Given a coefficients buffer and smoothing factor this function 
  * calculates the smoothing coeffs. It is a separate function so that you
  * can calculate the coeffs outside of the main processing loop and then
- * upload them "instantly" 
+ * upload them "instantly".
+ * Smoothing factor is from 0.0 to 1.0 such that 0 is minimal smoothing.
  */
 void ALGO_CalculateSmoothingCoeffs (ALGO_FreqAnalysis* analysis,
-                                    float cutoff_Hz, 
+                                    float smoothing_factor, 
                                     ALGO_SmoothingCoeffs* dest);
 
 void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart);

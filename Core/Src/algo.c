@@ -14,6 +14,8 @@
 
 #define algo_ENABLE_SMOOTHING 1
 
+#define algo_MAXIMUM_SMOOTHING_CUTOFF_Hz  20.0f
+
 #define algo_MAX_COMPENSATION_GAIN  7.0f
 
 #define PRINT_BUFFER_SIZE   256
@@ -120,7 +122,16 @@ float* ALGO_RunFreqAnalysis (ALGO_FreqAnalysis* analysis,
 
 }
 
-void ALGO_CalculateSmoothingCoeffs (ALGO_FreqAnalysis* analysis, float cutoff_Hz, ALGO_SmoothingCoeffs* dest) {
+void ALGO_UpdateFreqAnalysis (ALGO_FreqAnalysis* analysis, ALGO_DynamicParams* dynamic) {
+    memcpy(&analysis->dynamic, dynamic, sizeof(ALGO_DynamicParams));
+}
+
+void ALGO_CalculateSmoothingCoeffs (ALGO_FreqAnalysis* analysis, float smoothing_factor, ALGO_SmoothingCoeffs* dest) {
+
+    /* Calculate the smoothing filter cutoff in Hz, based on our constant for 
+     * minimum smoothing and the smoothing factor. It's important to have this
+     * in Hz as it means it's independent of frame_rate. */
+    float cutoff_Hz = (1.0 - smoothing_factor) * algo_MAXIMUM_SMOOTHING_CUTOFF_Hz;
 
     /* Setup to calculate Butterworth Lowpass at fc */
     float normalized_fc = cutoff_Hz/analysis->calc.frame_rate_Hz;
@@ -300,8 +311,8 @@ static void CalculateFreqRanges (ALGO_FreqBand* band_array, float min_freq, floa
 }
 
 static void InitialiseSmoothingFilters (ALGO_FreqAnalysis* analysis) {
-    /* Set default smoothing coefficients */
-    ALGO_CalculateSmoothingCoeffs(analysis, 1.5, &analysis->dynamic.smoothing_coeffs);
+    /* Set default smoothing coefficients 0.9 = heavy smoothing */
+    ALGO_CalculateSmoothingCoeffs(analysis, 0.9, &analysis->dynamic.smoothing_coeffs);
 
     /* For each band initialise a smoother and point it at the coeffs in our 
     * analysis dynamic properties. */
