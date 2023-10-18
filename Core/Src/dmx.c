@@ -9,6 +9,9 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <math.h>
+
 /* == CONFIGURATION ======================================================== */
 
 /* Start address of the fixture (remember this is not 0 indexed. )*/
@@ -242,4 +245,27 @@ void DMX_Init (UART_HandleTypeDef* huart, void(*data_ready_callback)(DMX_Data*))
     HAL_UART_Receive_DMA(huart, dmx_buffer, DMX_MAX_RX_BUFFER_SIZE);
     dmx_state = dmx_STATE_UNSYNC;
 
+}
+
+float DMX_LinMap (uint8_t input, float min_output, float max_output) {
+    // Calculate the ratio of the input value within the uint8_t range (0-255)
+    float ratio = (float)input / 255.0;
+    
+    // Map the ratio to the custom output range
+    float mapped_val = min_output + ratio * (max_output - min_output);
+    return mapped_val;
+}
+
+float DMX_LogMap(uint8_t value, float min_output, float max_output) {
+    // Ensure the input value is within the specified range
+    if (value == 0) {
+        value = 1; // Avoid logarithm of 0
+    }
+
+    // Calculate ratio
+    float ratio = log10f((float)value) / log10f(255.0);
+
+    // Calculate the logarithmic mapping
+    float mapped_val = min_output + ratio * (max_output - min_output);
+    return mapped_val;
 }

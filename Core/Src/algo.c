@@ -206,6 +206,15 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
                                 freq_analysis->dynamic.smoothing_coeffs.a1,
                                 freq_analysis->dynamic.smoothing_coeffs.a2);
             break;
+
+        case ALGO_PRINT_TYPE_DYNAMIC:
+            written = snprintf_(algo_print_buffer, PRINT_BUFFER_SIZE,
+                                "[dynamic] %.2f %.2f %.2f %.2f",
+                                freq_analysis->dynamic.gain_dB,
+                                freq_analysis->dynamic.band_compensation,
+                                freq_analysis->dynamic.contrast,
+                                freq_analysis->dynamic.smoothing_coeffs.a1);
+            break;
     }
 
     if (written < 0) {
@@ -221,8 +230,12 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
     }
 
     HAL_StatusTypeDef s = HAL_UART_Transmit_DMA(huart, (uint8_t*)algo_print_buffer, written);
-    if (HAL_OK != s) {
-    	__BKPT();
+    if (HAL_BUSY == s) {
+        /* Accept we can't send when busy. */
+        return;
+    } else if (HAL_OK != s) {
+        /* This should really be considered an issue but it's just debug so we'll let it go.*/
+   	    // __BKPT();
     }
     
 }

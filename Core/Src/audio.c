@@ -160,10 +160,13 @@ void AUDIO_UpdateParams(AUDIO_DynamicParams* dynamic) {
     audio_algo_params_pending.contrast = dynamic->contrast;
     ALGO_CalculateSmoothingCoeffs(&audio_freq_analysis, dynamic->smoothing_factor, &audio_algo_params_pending.smoothing_coeffs);
 
-    /* Set dynamics pending flag. */
-    audio_params_pending_flag = 1;
+    /* Check the queue is ready for events.  */
+    if (!audio_queue_handle) {
+        return;
+    }
 
-    /* Post to event queue. */
+     /* Set dynamics pending flag and notify the task. */
+    audio_params_pending_flag = 1;
     audio_Event event = audio_EVENT_PARAMS_UPDATE;
     osStatus_t s = osMessageQueuePut (audio_queue_handle, &event, 0, 0);
     if (s != osOK) {
@@ -275,6 +278,7 @@ static void audio_task(void* params) {
             case audio_EVENT_PARAMS_UPDATE:
                 /* Reconfigure algorithm parameters and then clear the update pending flag. */
                 ALGO_UpdateFreqAnalysis(&audio_freq_analysis, &audio_algo_params_pending);
+                ALGO_Print(ALGO_PRINT_TYPE_DYNAMIC, &audio_freq_analysis, &AUDIO_DEBUG_UART);
                 audio_params_pending_flag = 0;
                 continue;
         }
@@ -373,7 +377,7 @@ static void audio_Algorithm (int16_t *audio_lr) {
     /* Run the Frequency Analysis and then print the resulting band magnitudes. */
     float* band_mags = ALGO_RunFreqAnalysis(&audio_freq_analysis, &audio_fft_properties, 
                          audio_mag_f32);
-    ALGO_Print(ALGO_PRINT_TYPE_BAND_MAGS, &audio_freq_analysis, &AUDIO_DEBUG_UART);
+    // ALGO_Print(ALGO_PRINT_TYPE_BAND_MAGS, &audio_freq_analysis, &AUDIO_DEBUG_UART);
 
     /* Basic LED Animation to View Brightness */
     for (int i = 0; i < AUDIO_NUM_FREQ_BANDS; i++) {

@@ -592,9 +592,21 @@ static uint8_t g_rxDmx = 0;
 // 	HAL_UART_Receive_DMA(&huart6, g_data, 6);
 // }
 
-static void update_led_callback(DMX_Data* data) {
-    LED_SetAll(data->red, data->green, data->blue);
-    LED_Sync();
+//static void update_led_callback(DMX_Data* data) {
+//    LED_SetAll(data->red, data->green, data->blue);
+//    LED_Sync();
+//}
+
+static void raydance_dmx(DMX_Data* data) {
+    /* Convert dmx data into AUDIO_Dynamic type */
+    AUDIO_DynamicParams dynamic;
+    
+    dynamic.gain_dB = DMX_LogMap(data->gain, -80.0f, 12.0f);
+    dynamic.band_compensation = DMX_LinMap(data->band_compensation, 0.0f, 1.0f);
+    dynamic.contrast = DMX_LinMap(data->contrast, -1.0, 1.0);
+    dynamic.smoothing_factor = DMX_LinMap(data->smoothing, 0.0, 1.0);
+
+    AUDIO_UpdateParams(&dynamic);
 }
 /* USER CODE END 4 */
 
@@ -610,7 +622,7 @@ void StartDefaultTask(void *argument)
   /* USER CODE BEGIN 5 */
 
   LED_Init();
-  DMX_Init(&huart6, NULL);
+  DMX_Init(&huart6, raydance_dmx);
 
   AUDIO_Start();
   
