@@ -45,7 +45,9 @@ void ANIMATE_Init(ANIMATE_Instance* instance) {
 void ANIMATE_Run(ANIMATE_Instance* instance) {
     // Loop through each group
     for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
-        uint32_t currentPosition = instance->groups[i].pos;
+
+        // Calculate current position by summing global offset with group's position
+        uint32_t currentPosition = instance->groups[i].pos + instance->dynamic.offset;
 
         // Get RGB values from the current group's colour
         uint8_t red = instance->groups[i].dynamic.colour.red;
@@ -60,8 +62,8 @@ void ANIMATE_Run(ANIMATE_Instance* instance) {
 
         // Loop from 0 to size to set each pixel with the precomputed RGB values
         for (uint32_t j = 0; j < instance->groups[i].size; ++j) {
-            // Calculate pixel index
-            uint32_t index = currentPosition + j;
+            // Calculate pixel index and wrap it at LED_NUM_LEDS
+            uint32_t index = (currentPosition + j) % LED_NUM_LEDS;
 
             // Call LED_SetPixel function to set the pixel color
             LED_SetPixel(index, red, green, blue);
@@ -79,4 +81,8 @@ void ANIMATE_UpdateMagnitudes(ANIMATE_Instance* instance, float* mags) {
     for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
         instance->groups[i].magnitude = mags[i];
     }
+}
+
+void ANIMATE_UpdateOffset(ANIMATE_Instance* instance, uint32_t offset) {
+    instance->dynamic.offset = offset;
 }
