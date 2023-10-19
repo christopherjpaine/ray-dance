@@ -397,13 +397,6 @@ static void audio_Algorithm (int16_t *audio_lr) {
     	
     // }
     // LED_Sync();
-    
-    static uint32_t animation_offset = 0;
-    if (animation_offset++ >= LED_NUM_LEDS) {
-        animation_offset = 0;
-    }
-    ANIMATE_UpdateOffset(&audio_animate_instance, animation_offset);
-
     /* Update Animation instance with latest magnitudes */
     ANIMATE_UpdateMagnitudes(&audio_animate_instance, band_mags);
     ANIMATE_Run(&audio_animate_instance);

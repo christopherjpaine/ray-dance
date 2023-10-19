@@ -27,6 +27,8 @@
 void ANIMATE_Init(ANIMATE_Instance* instance) {
     // Set the global animation mode
     instance->dynamic.mode = ANIMATE_MODE_STATIC;
+    instance->dynamic.offset = 0;
+    instance->dynamic.offset_increment = 2;
 
     // Initialize groups property in a loop
     for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
@@ -43,6 +45,16 @@ void ANIMATE_Init(ANIMATE_Instance* instance) {
 }
 
 void ANIMATE_Run(ANIMATE_Instance* instance) {
+
+    // Increment the offset by the specified amount
+    instance->dynamic.offset += instance->dynamic.offset_increment;
+
+    // Wrap the offset at the number of LEDs
+    if (instance->dynamic.offset >= LED_NUM_LEDS) {
+        instance->dynamic.offset %= LED_NUM_LEDS;
+    }
+
+
     // Loop through each group
     for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
 

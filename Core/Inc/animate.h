@@ -45,7 +45,8 @@ typedef struct ANIMATE_Group_s{
 
 typedef struct ANIMATE_GlobalDynamics_s {
     ANIMATE_Mode mode;
-    uint32_t offset;  // New offset parameter
+    uint32_t offset;
+    uint32_t offset_increment;
 }ANIMATE_GlobalDynamics;
 
 typedef struct ANIMATE_Instance_s {
