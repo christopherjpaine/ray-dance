@@ -381,8 +381,12 @@ static void audio_Algorithm (int16_t *audio_lr) {
 
     /* Basic LED Animation to View Brightness */
     for (int i = 0; i < AUDIO_NUM_FREQ_BANDS; i++) {
-    	uint8_t red = 255 * band_mags[i];
-        LED_SetPixel(i, red, 0, 0);
+        for ( int j = 0; j < 23; j++ ) {
+            uint8_t red = 255 * band_mags[i];
+            int offset = i * 23;
+            LED_SetPixel(offset+j, red, 0, 0);
+        }
+    	
     }
     LED_Sync();
 

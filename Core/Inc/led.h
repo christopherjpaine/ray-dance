@@ -18,7 +18,7 @@
 
 /* == INTERFACE FUNCTIONS ================================================== */
 
-#define LED_NUM_LEDS 100
+#define LED_NUM_LEDS 200
 #define LED_SPI_HANDLE hspi2
 
 
