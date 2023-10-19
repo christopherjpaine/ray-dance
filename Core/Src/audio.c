@@ -296,7 +296,7 @@ static void audio_task(void* params) {
 static void audio_RxHalfCompleteCallback(SAI_HandleTypeDef* hsai){
     if (audio_state != audio_STATE_AWAITING_BUFFER_A) {
         /* Underflow - we are not processing fast enough. */
-//        __BKPT();
+       __BKPT();
         return;
     }
     audio_Event event = audio_EVENT_BUFFER_A_READY;
@@ -309,7 +309,7 @@ static void audio_RxHalfCompleteCallback(SAI_HandleTypeDef* hsai){
 static void audio_RxCompleteCallback(SAI_HandleTypeDef* hsai){
     if (audio_state != audio_STATE_AWAITING_BUFFER_B) {
         /* Underflow - we are not processing fast enough. */
-//        __BKPT();
+       __BKPT();
     	return;
     }
     audio_Event event = audio_EVENT_BUFFER_B_READY;
