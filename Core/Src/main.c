@@ -569,11 +569,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-static uint8_t g_data[5] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-static uint8_t g_data_null[5] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-static uint8_t tx_data[5];
-static char breakChar = 'X';
-static uint8_t g_rxDmx = 0;
 
 // void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
 //   if (huart == &huart6) {
@@ -621,7 +616,6 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
 
-  LED_Init();
   DMX_Init(&huart6, raydance_dmx);
 
   AUDIO_Start();

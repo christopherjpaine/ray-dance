@@ -8,6 +8,7 @@
 #include "wm8994.h"
 #include "algo.h"
 #include "led.h"
+#include "animate.h"
 
 #define ARM_MATH_CM7
 #include "arm_math.h"
@@ -102,6 +103,9 @@ static float audio_band_mags_f32[AUDIO_NUM_FREQ_BANDS] = {0.0f};
 static float audio_smoothed_band_mags_f32[AUDIO_NUM_FREQ_BANDS] = {0.0f};
 static ALGO_SmoothingFilter audio_smoothing_filters[AUDIO_NUM_FREQ_BANDS] = {0};
 
+/* Animation Instance */
+static ANIMATE_Instance audio_animate_instance;
+
 /* == INTERFACE FUNCTIONS ================================================== */
 
 void AUDIO_Init (SAI_HandleTypeDef* input_sai, SAI_HandleTypeDef* output_sai) {
@@ -145,6 +149,8 @@ void AUDIO_Start (void) {
         .name = "audio",
     };
     audio_queue_handle = osMessageQueueNew (3, sizeof(audio_Event), &queue_params);
+
+    ANIMATE_Init(&audio_animate_instance);
 
 }
 
@@ -199,7 +205,7 @@ static void audio_task(void* params) {
     audio_freq_analysis.max_freq = audio_MAXIMUM_ANALYSIS_FREQUENCY;
     audio_freq_analysis.sampling_rate_Hz = audio_SAMPLE_RATE_Hz;
     audio_freq_analysis.buffer_size = AUDIO_BUFFER_SAMPLES_PER_CHANNEL;
-    audio_freq_analysis.freq_bands = &freq_bands;
+    audio_freq_analysis.freq_bands = freq_bands;
     audio_freq_analysis.data.band_mags_f32 = audio_band_mags_f32;
     audio_freq_analysis.data.smoothed_band_mags_f32 = audio_smoothed_band_mags_f32;
     audio_freq_analysis.data.smoothing_filters = audio_smoothing_filters;
@@ -219,7 +225,7 @@ static void audio_task(void* params) {
         .init = {
             .sampling_rate = audio_SAMPLE_RATE_Hz,
             .samples_per_channel_per_buffer = AUDIO_BUFFER_SAMPLES_PER_CHANNEL,
-            .sys_clock_rate_Hz = SystemCoreClock
+            .sys_clock_rate_Hz = AUDIO_CORE_CLOCK_Hz
         }
     };
     ALGO_InitPipelineProperties(&pipeline);
@@ -380,15 +386,21 @@ static void audio_Algorithm (int16_t *audio_lr) {
     ALGO_Print(ALGO_PRINT_TYPE_BAND_MAGS, &audio_freq_analysis, &AUDIO_DEBUG_UART);
 
     /* Basic LED Animation to View Brightness */
-    for (int i = 0; i < AUDIO_NUM_FREQ_BANDS; i++) {
-        for ( int j = 0; j < 23; j++ ) {
-            uint8_t red = 255 * band_mags[i];
-            int offset = i * 23;
-            LED_SetPixel(offset+j, red, 0, 0);
-        }
+    // for (int i = 0; i < AUDIO_NUM_FREQ_BANDS; i++) {
+    //     for ( int j = 0; j < 23; j++ ) {
+    //         uint8_t red = 0xF6 * band_mags[AUDIO_NUM_FREQ_BANDS-i];
+    //         uint8_t green = 0x26 * band_mags[AUDIO_NUM_FREQ_BANDS-i];
+    //         uint8_t blue = 0x81 * band_mags[AUDIO_NUM_FREQ_BANDS-i];
+    //         int offset = i * 23;
+    //         LED_SetPixel(offset+j, 0, 0, blue);
+    //     }
     	
-    }
-    LED_Sync();
+    // }
+    // LED_Sync();
+
+    /* Update Animation instance with latest magnitudes */
+    ANIMATE_UpdateMagnitudes(&audio_animate_instance, band_mags);
+    ANIMATE_Run(&audio_animate_instance);
 
 }
 

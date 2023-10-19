@@ -18,10 +18,8 @@
 
 /* == INTERFACE FUNCTIONS ================================================== */
 
-#define LED_NUM_LEDS 200
+#define LED_NUM_LEDS 207
 #define LED_SPI_HANDLE hspi2
-
-
 
 extern SPI_HandleTypeDef LED_SPI_HANDLE;
 
