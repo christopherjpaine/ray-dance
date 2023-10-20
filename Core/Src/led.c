@@ -69,52 +69,50 @@ void LED_Sync(void) {
 }
 
 void LED_HsvToRgb(float hue, float saturation, float value, LED_RGB* rgb) {
-    // Ensure hue is in the range [0, 360)
-    hue = fmodf(hue, 360.0f);
-    if (hue < 0) {
+    // Ensure hue is in the range [0, 360) degrees
+    while (hue >= 360.0f) {
+        hue -= 360.0f;
+    }
+    while (hue < 0.0f) {
         hue += 360.0f;
     }
 
-    // Ensure saturation and value are in the range [0, 1]
-    saturation = fmaxf(0.0f, fminf(1.0f, saturation));
-    value = fmaxf(0.0f, fminf(1.0f, value));
-
-    // HSV to RGB conversion algorithm
+    // Convert HSV to RGB
     float c = value * saturation;
-    float x = c * (1.0f - fabsf(fmodf(hue / 60.0f, 2.0f) - 1.0f));
+    float x = c * (1 - fabsf(fmodf(hue / 60.0f, 2) - 1));
     float m = value - c;
-    
+
     float r, g, b;
-    if (hue < 60.0f) {
+
+    if (hue >= 0.0f && hue < 60.0f) {
         r = c;
         g = x;
-        b = 0.0f;
-    } else if (hue < 120.0f) {
+        b = 0;
+    } else if (hue >= 60.0f && hue < 120.0f) {
         r = x;
         g = c;
-        b = 0.0f;
-    } else if (hue < 180.0f) {
-        r = 0.0f;
+        b = 0;
+    } else if (hue >= 120.0f && hue < 180.0f) {
+        r = 0;
         g = c;
         b = x;
-    } else if (hue < 240.0f) {
-        r = 0.0f;
+    } else if (hue >= 180.0f && hue < 240.0f) {
+        r = 0;
         g = x;
         b = c;
-    } else if (hue < 300.0f) {
+    } else if (hue >= 240.0f && hue < 300.0f) {
         r = x;
-        g = 0.0f;
+        g = 0;
         b = c;
     } else {
         r = c;
-        g = 0.0f;
+        g = 0;
         b = x;
     }
 
-    // Adjust RGB values and store in the RGB structure
-    rgb->r = r + m;
-    rgb->g = g + m;
-    rgb->b = b + m;
+    rgb->r = (uint8_t)((r + m) * 255);
+    rgb->g = (uint8_t)((g + m) * 255);
+    rgb->b = (uint8_t)((b + m) * 255);
 }
 
 /* == FILE SCOPE FUNCTIONS ================================================= */

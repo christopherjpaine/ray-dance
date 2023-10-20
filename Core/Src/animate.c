@@ -113,4 +113,15 @@ void ANIMATE_UpdateGlobalDynamics(ANIMATE_Instance* instance, ANIMATE_GlobalDyna
 
     /* Use speed to calculate offset increment. */
     instance->state.offset_increment = animate_MAXIMUM_OFFSET_INCREMENT * dynamics->speed;
+
+    /* Use hue to set the colour of all groups. */
+    LED_RGB rgb;
+    LED_HsvToRgb(dynamics->hue, 1.0, 1.0, &rgb);
+    for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
+        // Set the RGB color and magnitude for each group
+        instance->groups[i].dynamic.colour.red = rgb.r;
+        instance->groups[i].dynamic.colour.green = rgb.g;
+        instance->groups[i].dynamic.colour.blue = rgb.b;
+    }
+
 }

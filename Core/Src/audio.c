@@ -172,6 +172,7 @@ void AUDIO_UpdateParams(AUDIO_DynamicParams* dynamic) {
 
     /* Convert Audio Dynamics into ANIMATE dynamics */
     audio_anim_params_pending.speed = dynamic->animation_speed;
+    audio_anim_params_pending.hue = dynamic->hue;
 
     /* Check the queue is ready for events.  */
     if (!audio_queue_handle) {
