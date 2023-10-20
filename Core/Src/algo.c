@@ -172,8 +172,8 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
             ALGO_FftProperties* fft_properties = (ALGO_FftProperties*)data;
             written = snprintf_(algo_print_buffer, PRINT_BUFFER_SIZE,
                 "[algo_info] FFT Properties \n"
-                "\t fs: %uHz\n"
-                "\t bins: %u\n"
+                "\t fs: %luHz\n"
+                "\t bins: %lu\n"
                 "\t resolution: %fHz\n"
                 "\t precision: %fHz\n",
                 fft_properties->init.sampling_rate,
@@ -215,6 +215,9 @@ void ALGO_Print(ALGO_PrintType type, void* data, UART_HandleTypeDef* huart) {
                                 freq_analysis->dynamic.contrast,
                                 freq_analysis->dynamic.smoothing_coeffs.a1);
             break;
+
+        default:
+        	return;
     }
 
     if (written < 0) {
@@ -332,8 +335,8 @@ static void InitialiseSmoothingFilters (ALGO_FreqAnalysis* analysis) {
     for (int i = 0; i < analysis->num_bands; i++) {
         arm_biquad_cascade_df2T_init_f32(&analysis->data.smoothing_filters[i].inst,
                                          1, // Single stage
-                                         &analysis->dynamic.smoothing_coeffs,
-                                         &analysis->data.smoothing_filters[i].states);
+                                         (float*)&analysis->dynamic.smoothing_coeffs,
+                                         (float*)&analysis->data.smoothing_filters[i].states);
     }
 }
 

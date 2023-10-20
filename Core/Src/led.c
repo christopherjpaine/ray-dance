@@ -19,7 +19,7 @@ static PixelDebug pixel_buffer[LED_NUM_LEDS] = {0};
 uint8_t byte_buffer[led_BUFFER_SIZE_BYTES];
 bool led_busy = false;
 
-static void sync_complete_callback (SPI_HandleTypeDef hSpi);
+static void sync_complete_callback (SPI_HandleTypeDef* hSpi);
 
 void LED_Init(void) {
     // TODO set callback
@@ -29,22 +29,6 @@ void LED_Init(void) {
     LED_SetPixel(LED_NUM_LEDS/2, 0, 0, 100);
     LED_Sync();
 }
-
-// #define WS2812_FILL_BUFFER(value) \
-//     for( uint8_t mask = 0x80; mask; mask >>= 1 ) { \
-//         if( value & mask ) { \
-//             *ptr++ = 0xfc; \
-//         } else { \
-//             *ptr++ = 0x80; \
-//         } \
-//     }
-
-// void set_pixel(uint16_t led_no, uint8_t r, uint8_t g, uint8_t b) {
-//     uint8_t * ptr = &byte_buffer[24 * led_no];
-//     WS2812_FILL_BUFFER(g);
-//     WS2812_FILL_BUFFER(r);
-//     WS2812_FILL_BUFFER(b);
-// }
 
 static inline void set_pixel(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b) {
 
@@ -99,7 +83,7 @@ void LED_Sync(void) {
     HAL_SPI_Transmit_DMA(&LED_SPI_HANDLE, byte_buffer, led_BUFFER_SIZE_BYTES);
 }
 
-static void sync_complete_callback (SPI_HandleTypeDef hSpi) {
+static void sync_complete_callback (SPI_HandleTypeDef* hSpi) {
     (void) hSpi;
     led_busy = false;
 }

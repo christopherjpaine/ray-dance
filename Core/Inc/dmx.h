@@ -21,7 +21,7 @@ typedef struct DMX_DataAlgo_s{
     uint8_t gain;
     uint8_t band_compensation;
     uint8_t smoothing;
-    int8_t animation_speed;
+    uint8_t animation_speed;
 }DMX_DataAlgo;
 
 /* Representation of the dmx data that can be directly typecast onto the 

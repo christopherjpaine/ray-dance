@@ -13,7 +13,11 @@
 #define ARM_MATH_CM7
 #include "arm_math.h"
 
+#include <string.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include <math.h>
+
 
 /* == CONFIGURATION ======================================================== */
 
@@ -76,8 +80,6 @@ static void audio_RxCompleteCallback(SAI_HandleTypeDef* hsai);
 static void audio_task(void* params);
 
 static void audio_Algorithm (int16_t *audio_lr);
-
-static void audio_DebugResults (float *mag_f32, UART_HandleTypeDef* huart);
 
 /* == FILE STATIC VARIABLES ================================================ */
 
@@ -410,8 +412,7 @@ static void audio_Algorithm (int16_t *audio_lr) {
 
 }
 
-
-
+#if 0 // prints the bin mags - should move into algo really.
 static void audio_DebugResults (float *mag_f32, UART_HandleTypeDef* huart) {
     
     if (!huart) {
@@ -439,7 +440,7 @@ static void audio_DebugResults (float *mag_f32, UART_HandleTypeDef* huart) {
      * up to 3 sig figs for each. Then convert and add into the string.*/
     for (int i = 0; i < AUDIO_DEBUG_NUMBER_OF_BINS; i++) {
         int temp_int = (int)(mag_f32[i] * 1000.0f);
-        char* temp_str[4] = {0};
+        char temp_str[4] = {0};
         itoa(temp_int, temp_str, 10);
         memcpy(&debug_str[i*4], temp_str, strlen(temp_str));
         debug_str[(i*4)+3] = ',';
@@ -455,3 +456,4 @@ static void audio_DebugResults (float *mag_f32, UART_HandleTypeDef* huart) {
     }
 
 }
+#endif

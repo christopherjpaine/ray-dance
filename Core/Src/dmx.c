@@ -160,7 +160,13 @@ static void dmx_ErrorCallback (UART_HandleTypeDef* huart) {
 static void dmx_RegisterCallbacks(UART_HandleTypeDef* huart) {
     HAL_StatusTypeDef status = HAL_OK;
     status = HAL_UART_RegisterCallback(huart, HAL_UART_RX_COMPLETE_CB_ID, dmx_RxCompleteCallback);
+    if (status != HAL_OK){
+    	__BKPT();
+	}
     status = HAL_UART_RegisterCallback(huart, HAL_UART_ERROR_CB_ID, dmx_ErrorCallback);
+    if (status != HAL_OK){
+		__BKPT();
+	}
 }
 
 static void dmx_debug_log(char* str, uint8_t len) {
@@ -180,8 +186,8 @@ static void dmx_task(void* params) {
                 continue;
 
             case dmx_STATE_FAILED:
-                static char dmx_failed_str[10] = "[dmx] fail\n";
-                dmx_debug_log(dmx_failed_str, 10);
+                static char dmx_failed_str[12] = "[dmx] fail\n";
+                dmx_debug_log(dmx_failed_str, 12);
                 continue;
 
             case dmx_STATE_UNSYNC:
@@ -203,7 +209,7 @@ static void dmx_task(void* params) {
                     char * debug_string_ptr = debug_string + 5;
                     memset(debug_string_ptr, ' ', DEBUG_STRING_SIZE-5);
                     for (int i = 0; i < DMX_NUM_CHANNELS; i++) {
-                    	char* temp[4] = {0};
+                    	char temp[4] = {0};
                         itoa(((uint8_t*)dmx_data)[i], temp, 10);
                         memcpy(&debug_string_ptr[i*4], temp, strlen(temp));
                         debug_string_ptr[(i*4)+3] = ',';
@@ -275,7 +281,7 @@ float DMX_LogMap(uint8_t value, float min_output, float max_output) {
 
 float DMX_SymmetricLogMap(uint8_t value, float min_output, float max_output) {
     /* Convert to signed value. */
-    int8_t signed_value = convertToSigned(value);
+    int8_t signed_value = ConvertToSigned(value);
     
     // Handle the special case where value is 0
     if (signed_value == 0) {
