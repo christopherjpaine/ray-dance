@@ -32,6 +32,9 @@ typedef enum dmx_State_etag {
 	dmx_STATE_FAILED,
 }dmx_State_e;
 
+/* == FILE SCOPE FUNCTIONS ================================================= */
+static int8_t ConvertToSigned(uint8_t value);
+
 /* == FILE STATIC ========================================================== */
 
 // Receiver State
@@ -269,3 +272,38 @@ float DMX_LogMap(uint8_t value, float min_output, float max_output) {
     float mapped_val = min_output + ratio * (max_output - min_output);
     return mapped_val;
 }
+
+float DMX_SymmetricLogMap(uint8_t value, float min_output, float max_output) {
+    /* Convert to signed value. */
+    int8_t signed_value = convertToSigned(value);
+    
+    // Handle the special case where value is 0
+    if (signed_value == 0) {
+        return 0.0f;
+    }
+
+    // Calculate the logarithmic mapping for non-zero values
+    float log_value = log10f(fabsf((float)signed_value));
+    float mapped_value = copysignf(log_value, signed_value) / log10f(128.0f) * (max_output - min_output);
+
+    // Map the value to the output range
+    return mapped_value;
+}
+
+float DMX_SymmetricExpMap(uint8_t value, float exponent_base, float max_output) {
+    // Convert uint8_t to int8_t where 128 represents 0
+    int8_t signed_value = ConvertToSigned(value);
+
+    // Calculate the custom exponential mapping for non-zero values
+    float exp_value = ((powf(exponent_base, fabsf((float)signed_value / 128.0f)) - 1) / (exponent_base - 1));
+    float mapped_value = copysignf(exp_value, signed_value) * max_output;
+
+    // Map the value to the output range
+    return mapped_value;
+}
+
+static int8_t ConvertToSigned(uint8_t value) {
+    // Subtract 128 to map 128 to 0
+    return (int8_t)(value - 128);
+}
+
