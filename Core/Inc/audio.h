@@ -33,7 +33,7 @@ extern uint32_t SystemCoreClock;
 typedef struct AUDIO_DynamicParams_s {
     float gain_dB;
     float band_compensation; // 0.0f to 1.0f
-    float contrast; // +/-1.0f
+    float contrast; // +/-1.0f - currently unused.
     float smoothing_factor; // 0.0 to 1.0f
     float animation_speed; // -1.0 to 1.0
 }AUDIO_DynamicParams;

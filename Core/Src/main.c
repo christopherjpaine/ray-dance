@@ -598,7 +598,7 @@ static void raydance_dmx(DMX_Data* data) {
     
     dynamic.gain_dB = DMX_LogMap(data->gain, -40.0f, 24.0f);
     dynamic.band_compensation = DMX_LinMap(data->band_compensation, 0.0f, 1.0f);
-    dynamic.contrast = DMX_LinMap(data->contrast, -1.0, 1.0);
+    dynamic.contrast = 0.0; // currently unused and unmapped.
     dynamic.smoothing_factor = DMX_LinMap(data->smoothing, 0.5, 1.0);
     dynamic.animation_speed = DMX_SymmetricExpMap(data->animation_speed, 6.0f, 1.0f);
 
