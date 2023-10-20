@@ -45,13 +45,17 @@ typedef struct ANIMATE_Group_s{
 
 typedef struct ANIMATE_GlobalDynamics_s {
     ANIMATE_Mode mode;
-    uint32_t offset;
     uint32_t offset_increment;
 }ANIMATE_GlobalDynamics;
+
+typedef struct ANIMATE_GlobalState_s {
+    float offset;
+}ANIMATE_GlobalState;
 
 typedef struct ANIMATE_Instance_s {
     ANIMATE_Group groups[ANIMATE_NUM_GROUPS];
     ANIMATE_GlobalDynamics dynamic;
+    ANIMATE_GlobalState state;
 }ANIMATE_Instance;
 
 /* == INTERFACE FUNCTIONS ================================================== */
@@ -62,7 +66,5 @@ void ANIMATE_Run(ANIMATE_Instance* instance);
 
 void ANIMATE_UpdateMagnitudes(ANIMATE_Instance* instance, float* mags);
 
-void ANIMATE_UpdateOffset(ANIMATE_Instance* instance, uint32_t offset);
-
-void ANIMATE_UpdateGlobalParams(ANIMATE_Instance* instance, ANIMATE_GlobalDynamics* dynamic);
+void ANIMATE_UpdateGlobalDynamics(ANIMATE_Instance* instance, ANIMATE_GlobalDynamics* dynamic);
 

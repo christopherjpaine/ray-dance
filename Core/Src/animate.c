@@ -25,10 +25,12 @@
 /* == INTERFACE FUNCTINS =================================================== */
 
 void ANIMATE_Init(ANIMATE_Instance* instance) {
-    // Set the global animation mode
+    // Set dynamics to their defaults
     instance->dynamic.mode = ANIMATE_MODE_STATIC;
-    instance->dynamic.offset = 0;
-    instance->dynamic.offset_increment = 2;
+    instance->dynamic.offset_increment = 1.5f;
+
+    // Configure the initial state
+    instance->state.offset = 0.0f;
 
     // Initialize groups property in a loop
     for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
@@ -46,20 +48,25 @@ void ANIMATE_Init(ANIMATE_Instance* instance) {
 
 void ANIMATE_Run(ANIMATE_Instance* instance) {
 
-    // Increment the offset by the specified amount
-    instance->dynamic.offset += instance->dynamic.offset_increment;
+    // Increment the offset by the specified amount (as a floating-point value)
+    instance->state.offset += instance->dynamic.offset_increment;
 
     // Wrap the offset at the number of LEDs
-    if (instance->dynamic.offset >= LED_NUM_LEDS) {
-        instance->dynamic.offset %= LED_NUM_LEDS;
+    if (instance->state.offset >= LED_NUM_LEDS) {
+        instance->state.offset -= LED_NUM_LEDS;
+    } else if (instance->state.offset < 0) {
+        instance->state.offset += LED_NUM_LEDS;
     }
+
+    // Round the offset to the nearest integer and store it as offset_u32
+    uint32_t offset_u32 = (uint32_t)(instance->state.offset + 0.5);
 
 
     // Loop through each group
     for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
 
         // Calculate current position by summing global offset with group's position
-        uint32_t currentPosition = instance->groups[i].pos + instance->dynamic.offset;
+        uint32_t currentPosition = instance->groups[i].pos + offset_u32;
 
         // Get RGB values from the current group's colour
         uint8_t red = instance->groups[i].dynamic.colour.red;
@@ -93,8 +100,4 @@ void ANIMATE_UpdateMagnitudes(ANIMATE_Instance* instance, float* mags) {
     for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
         instance->groups[i].magnitude = mags[i];
     }
-}
-
-void ANIMATE_UpdateOffset(ANIMATE_Instance* instance, uint32_t offset) {
-    instance->dynamic.offset = offset;
 }
