@@ -308,6 +308,17 @@ float DMX_SymmetricExpMap(uint8_t value, float exponent_base, float max_output) 
     return mapped_value;
 }
 
+float DMX_ExpMap(uint8_t value, float exponent_base, float min_output, float max_output) {
+    // Calculate the exponential mapping for the given input value (0 to 255)
+    float exp_value = ((powf(exponent_base, (float)value / 255.0f) - 1) / (exponent_base - 1));
+
+    // Map the value to the output range
+    float mapped_value = min_output + (exp_value * (max_output - min_output));
+
+    return mapped_value;
+}
+
+
 static int8_t ConvertToSigned(uint8_t value) {
     // Subtract 128 to map 128 to 0
     return (int8_t)(value - 128);

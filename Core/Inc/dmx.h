@@ -39,6 +39,9 @@ float DMX_LinMap (uint8_t input, float min_output, float max_output);
 
 float DMX_LogMap(uint8_t value, float min_output, float max_output);
 
+/* Maps unsigned input exponentially to range. */
+float DMX_ExpMap(uint8_t value, float exponent_base, float min_output, float max_output);
+
 /* Symmetrically and logarithmically map signed input. Note that 0 value will
  * always map to 0 output. But if min_output is non-zero there will be a step
  * change. It is also recommended to have min_output and max_output have the 
