@@ -3,44 +3,138 @@
 
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 
+/* == CONFIGURATION ======================================================== */
+
+/* The reset pulse is equivalent to the number of bytes we need to send at the
+ * configured SPI frequency in order to exceed the WS2812B frame reset period. */
 #define led_RESET_PULSE_BYTES 60
+
+/* Buffer size is 24 bytes per LED, as each bit is represented by a byte so 
+ * that we can use the SPI peripheral for sending the data. Plus the reset
+ * pulse bytes. */
 #define led_BUFFER_SIZE_BYTES (LED_NUM_LEDS * 24 + led_RESET_PULSE_BYTES)
 
-typedef struct PixelDebug_s {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-} PixelDebug;
-
-static PixelDebug pixel_buffer[LED_NUM_LEDS] = {0};
+/* == TYPES ================================================================ */
 
 
-uint8_t byte_buffer[led_BUFFER_SIZE_BYTES];
-bool led_busy = false;
+/* == FILE SCOPE VARIABLES ================================================= */
 
-static void sync_complete_callback (SPI_HandleTypeDef* hSpi);
+#if defined PIXEL_DEBUG
+    static LED_RGB led_debug_pixel_buffer[LED_NUM_LEDS] = {0};
+#endif
+
+/* Pixel buffer and associated semaphore. */
+static uint8_t led_pixel_buffer[led_BUFFER_SIZE_BYTES];
+static bool led_busy = false;
+
+/* == FILE SCOPE FUNCTION DECLARATIONS ===================================== */
+
+static void SyncCompleteCallback (SPI_HandleTypeDef* hSpi);
+static inline void SetPixel(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b);
+
+/* == INTERFACE FUNCTIONS ================================================== */
+
 
 void LED_Init(void) {
     // TODO set callback
-    HAL_SPI_RegisterCallback(&(LED_SPI_HANDLE), HAL_SPI_TX_COMPLETE_CB_ID, sync_complete_callback);
+    HAL_SPI_RegisterCallback(&(LED_SPI_HANDLE), HAL_SPI_TX_COMPLETE_CB_ID, SyncCompleteCallback);
 
     LED_SetAll(100, 100, 50);
     LED_SetPixel(LED_NUM_LEDS/2, 0, 0, 100);
     LED_Sync();
 }
 
-static inline void set_pixel(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b) {
+void LED_SetPixel(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b) {
+    /* Ignore out of bounds pixels */
+    if (LED_NUM_LEDS <= pixel) {
+        return;
+    }
+    SetPixel(pixel, r, g, b);
+}
+
+void LED_SetAll(uint8_t r, uint8_t g, uint8_t b) {
+    for( uint16_t i = 0; i < LED_NUM_LEDS; ++i) {
+        SetPixel(i, r, g, b);
+    }
+}
+
+void LED_Sync(void) {
+    if (led_busy) {
+        return;
+    }
+    led_busy = true;
+    HAL_SPI_Transmit_DMA(&LED_SPI_HANDLE, led_pixel_buffer, led_BUFFER_SIZE_BYTES);
+}
+
+void LED_HsvToRgb(float hue, float saturation, float value, LED_RGB* rgb) {
+    // Ensure hue is in the range [0, 360)
+    hue = fmodf(hue, 360.0f);
+    if (hue < 0) {
+        hue += 360.0f;
+    }
+
+    // Ensure saturation and value are in the range [0, 1]
+    saturation = fmaxf(0.0f, fminf(1.0f, saturation));
+    value = fmaxf(0.0f, fminf(1.0f, value));
+
+    // HSV to RGB conversion algorithm
+    float c = value * saturation;
+    float x = c * (1.0f - fabsf(fmodf(hue / 60.0f, 2.0f) - 1.0f));
+    float m = value - c;
+    
+    float r, g, b;
+    if (hue < 60.0f) {
+        r = c;
+        g = x;
+        b = 0.0f;
+    } else if (hue < 120.0f) {
+        r = x;
+        g = c;
+        b = 0.0f;
+    } else if (hue < 180.0f) {
+        r = 0.0f;
+        g = c;
+        b = x;
+    } else if (hue < 240.0f) {
+        r = 0.0f;
+        g = x;
+        b = c;
+    } else if (hue < 300.0f) {
+        r = x;
+        g = 0.0f;
+        b = c;
+    } else {
+        r = c;
+        g = 0.0f;
+        b = x;
+    }
+
+    // Adjust RGB values and store in the RGB structure
+    rgb->r = r + m;
+    rgb->g = g + m;
+    rgb->b = b + m;
+}
+
+/* == FILE SCOPE FUNCTIONS ================================================= */
+
+static void SyncCompleteCallback (SPI_HandleTypeDef* hSpi) {
+    (void) hSpi;
+    led_busy = false;
+}
+
+static inline void SetPixel(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b) {
 
     #if defined PIXEL_DEBUG
-        pixel_buffer[pixel].r = r;
-        pixel_buffer[pixel].g = g;
-        pixel_buffer[pixel].b = b;
+        led_debug_pixel_buffer[pixel].r = r;
+        led_debug_pixel_buffer[pixel].g = g;
+        led_debug_pixel_buffer[pixel].b = b;
     #endif
     uint16_t pixel_pos = (24 * pixel) + led_RESET_PULSE_BYTES;
-    uint8_t* ptr_g = &byte_buffer[pixel_pos];
-    uint8_t* ptr_r = &byte_buffer[pixel_pos+8];
-    uint8_t* ptr_b = &byte_buffer[pixel_pos+16];
+    uint8_t* ptr_g = &led_pixel_buffer[pixel_pos];
+    uint8_t* ptr_r = &led_pixel_buffer[pixel_pos+8];
+    uint8_t* ptr_b = &led_pixel_buffer[pixel_pos+16];
     for( uint8_t mask = 0x80; mask; mask >>= 1 ){
         if (g & mask){
             *ptr_g++ = 0xfc;
@@ -58,32 +152,4 @@ static inline void set_pixel(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b) {
             *ptr_b++ = 0x80;
         }
     }
-}
-
-void LED_SetPixel(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b) {
-    /* Ignore out of bounds pixels */
-    if (LED_NUM_LEDS <= pixel) {
-        return;
-    }
-    set_pixel(pixel, r, g, b);
-}
-
-void LED_SetAll(uint8_t r, uint8_t g, uint8_t b) {
-    uint8_t * ptr = byte_buffer;
-    for( uint16_t i = 0; i < LED_NUM_LEDS; ++i) {
-        set_pixel(i, r, g, b);
-    }
-}
-
-void LED_Sync(void) {
-    if (led_busy) {
-        return;
-    }
-    led_busy = true;
-    HAL_SPI_Transmit_DMA(&LED_SPI_HANDLE, byte_buffer, led_BUFFER_SIZE_BYTES);
-}
-
-static void sync_complete_callback (SPI_HandleTypeDef* hSpi) {
-    (void) hSpi;
-    led_busy = false;
 }
