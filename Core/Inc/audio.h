@@ -35,6 +35,7 @@ typedef struct AUDIO_DynamicParams_s {
     float band_compensation; // 0.0f to 1.0f
     float contrast; // +/-1.0f
     float smoothing_factor; // 0.0 to 1.0f
+    float animation_speed; // -1.0 to 1.0
 }AUDIO_DynamicParams;
 
 /* == INTERFACE FUNCTIONS ================================================== */

@@ -600,6 +600,7 @@ static void raydance_dmx(DMX_Data* data) {
     dynamic.band_compensation = DMX_LinMap(data->band_compensation, 0.0f, 1.0f);
     dynamic.contrast = DMX_LinMap(data->contrast, -1.0, 1.0);
     dynamic.smoothing_factor = DMX_LinMap(data->smoothing, 0.0, 1.0);
+    dynamic.animation_speed = DMX_LinMap(data->animation_speed, -1.0f, 1.0f);
 
     AUDIO_UpdateParams(&dynamic);
 }

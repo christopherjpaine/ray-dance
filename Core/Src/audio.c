@@ -90,9 +90,6 @@ static SAI_HandleTypeDef* audio_output_sai = NULL;
 
 audio_State audio_state = audio_STATE_AWAITING_BUFFER_A;
 
-static uint8_t audio_params_pending_flag = 0;
-ALGO_DynamicParams audio_algo_params_pending = {0};
-
 arm_rfft_fast_instance_f32 audio_fft_instance;
 
 ALGO_FftProperties audio_fft_properties = {0};
@@ -105,6 +102,11 @@ static ALGO_SmoothingFilter audio_smoothing_filters[AUDIO_NUM_FREQ_BANDS] = {0};
 
 /* Animation Instance */
 static ANIMATE_Instance audio_animate_instance;
+
+/* Dynamic Parameters of algo/animate */
+static uint8_t audio_params_pending_flag = 0;
+ALGO_DynamicParams audio_algo_params_pending = {0};
+ANIMATE_GlobalDynamics audio_anim_params_pending = {0};
 
 /* == INTERFACE FUNCTIONS ================================================== */
 
@@ -165,6 +167,9 @@ void AUDIO_UpdateParams(AUDIO_DynamicParams* dynamic) {
     audio_algo_params_pending.band_compensation = dynamic->band_compensation;
     audio_algo_params_pending.contrast = dynamic->contrast;
     ALGO_CalculateSmoothingCoeffs(&audio_freq_analysis, dynamic->smoothing_factor, &audio_algo_params_pending.smoothing_coeffs);
+
+    /* Convert Audio Dynamics into ANIMATE dynamics */
+    audio_anim_params_pending.speed = dynamic->animation_speed;
 
     /* Check the queue is ready for events.  */
     if (!audio_queue_handle) {
@@ -282,9 +287,11 @@ static void audio_task(void* params) {
                 continue;
 
             case audio_EVENT_PARAMS_UPDATE:
-                /* Reconfigure algorithm parameters and then clear the update pending flag. */
+                /* Reconfigure both algorithm and animation parameters and 
+                 * then clear the update pending flag. */
                 ALGO_UpdateFreqAnalysis(&audio_freq_analysis, &audio_algo_params_pending);
                 // ALGO_Print(ALGO_PRINT_TYPE_DYNAMIC, &audio_freq_analysis, &AUDIO_DEBUG_UART);
+                ANIMATE_UpdateGlobalDynamics(&audio_animate_instance, &audio_anim_params_pending);
                 audio_params_pending_flag = 0;
                 continue;
         }

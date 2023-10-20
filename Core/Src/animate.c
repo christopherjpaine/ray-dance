@@ -16,6 +16,8 @@
 
 #define animate_GROUP_SIZE  23
 
+#define animate_MAXIMUM_OFFSET_INCREMENT    50
+
 /* == DEFINES ============================================================== */
 
 /* == TYPES ================================================================ */
@@ -25,14 +27,16 @@
 /* == INTERFACE FUNCTINS =================================================== */
 
 void ANIMATE_Init(ANIMATE_Instance* instance) {
-    // Set dynamics to their defaults
+    /* Set dynamics to their defaults */
     instance->dynamic.mode = ANIMATE_MODE_STATIC;
-    instance->dynamic.offset_increment = 1.5f;
+    instance->dynamic.speed = 0.0f;
 
-    // Configure the initial state
+    /* Configure the initial state, both internal params and those driven
+     * by the dynamic parameters. */
     instance->state.offset = 0.0f;
+    ANIMATE_UpdateGlobalDynamics(instance, &instance->dynamic);
 
-    // Initialize groups property in a loop
+    /* Initialize groups property in a loop */
     for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
         // Set the RGB color and magnitude for each group
         instance->groups[i].dynamic.colour.red = 0xF6;
@@ -49,7 +53,7 @@ void ANIMATE_Init(ANIMATE_Instance* instance) {
 void ANIMATE_Run(ANIMATE_Instance* instance) {
 
     // Increment the offset by the specified amount (as a floating-point value)
-    instance->state.offset += instance->dynamic.offset_increment;
+    instance->state.offset += instance->state.offset_increment;
 
     // Wrap the offset at the number of LEDs
     if (instance->state.offset >= LED_NUM_LEDS) {
@@ -100,4 +104,13 @@ void ANIMATE_UpdateMagnitudes(ANIMATE_Instance* instance, float* mags) {
     for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
         instance->groups[i].magnitude = mags[i];
     }
+}
+
+void ANIMATE_UpdateGlobalDynamics(ANIMATE_Instance* instance, ANIMATE_GlobalDynamics* dynamics){
+
+    /* Store copy in instance */
+    memcpy(&instance->dynamic, dynamics, sizeof(*dynamics));
+
+    /* Use speed to calculate offset increment. */
+    instance->state.offset_increment = animate_MAXIMUM_OFFSET_INCREMENT * dynamics->speed;
 }

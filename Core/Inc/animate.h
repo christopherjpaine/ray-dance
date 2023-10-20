@@ -45,11 +45,12 @@ typedef struct ANIMATE_Group_s{
 
 typedef struct ANIMATE_GlobalDynamics_s {
     ANIMATE_Mode mode;
-    uint32_t offset_increment;
+    float speed; // -1.0 to 1.0
 }ANIMATE_GlobalDynamics;
 
 typedef struct ANIMATE_GlobalState_s {
     float offset;
+    float offset_increment;
 }ANIMATE_GlobalState;
 
 typedef struct ANIMATE_Instance_s {
