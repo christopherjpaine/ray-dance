@@ -135,7 +135,7 @@ void ANIMATE_UpdateGlobalDynamics(ANIMATE_Instance* instance, ANIMATE_GlobalDyna
         LED_HsvToRgb(dynamics->hue, 1.0, 1.0, &rgb);
     #endif
 
-    #if 0
+    #if 1
         ANIMATE_Colour rgb_end = {
             .red = 0xF6,
             .green = 0x26,
@@ -176,13 +176,13 @@ static void GradientColouredGroups (ANIMATE_Instance* instance, ANIMATE_Colour* 
     uint32_t halfway = (ANIMATE_NUM_GROUPS+1)/2;
     for (uint32_t i = 0; i < halfway; i++) {
         float ratio = i/ANIMATE_NUM_GROUPS;
-        InterpolateRGBGradient(colour_start, colour_end, &instance[i].dynamic.colour, ratio);
+        InterpolateRGBGradient(colour_start, colour_end, &instance->groups[i].dynamic.colour, ratio);
     }
 
     /* Then the other half going back so we get a full gradient.*/
     for (uint32_t i = halfway; i < ANIMATE_NUM_GROUPS; i++){
         float ratio = i/ANIMATE_NUM_GROUPS;
-        InterpolateRGBGradient(colour_end, colour_start, &instance[i].dynamic.colour, ratio);
+        InterpolateRGBGradient(colour_end, colour_start, &instance->groups[i].dynamic.colour, ratio);
     }
 
 }
