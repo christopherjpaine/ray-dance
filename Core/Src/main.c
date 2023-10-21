@@ -25,7 +25,7 @@
 #include "stm32f7xx_ll_usart.h"
 #include "dmx.h"
 #include "audio.h"
-
+#include "led.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -602,11 +602,17 @@ static void raydance_dmx(DMX_Data* data) {
     dynamic.smoothing_factor = DMX_LinMap(data->smoothing, 0.5, 1.0);
     dynamic.animation_speed = DMX_SymmetricExpMap(data->animation_speed, 6.0f, 1.0f);
     #if DMX_ENABLE_RGB_COLOUR == 1
-      dynamic.red = data->red;
-      dynamic.green = data->green;
-      dynamic.blue = data->blue;
+      dynamic.colour_a.red = data->colour_a.red;
+      dynamic.colour_a.green = data->colour_a.green;
+      dynamic.colour_a.blue = data->colour_a.blue;
+      dynamic.colour_b.red = data->colour_b.red;
+      dynamic.colour_b.green = data->colour_b.green;
+      dynamic.colour_b.blue = data->colour_b.blue;
     #else
-      dynamic.hue = DMX_LinMap(data->hue, 0.0f, 360.0f);
+      float hue_a = DMX_LinMap(data->hue_a, 0, 360);
+      float hue_b = DMX_LinMap(data->hue_b, 0, 360);
+      LED_HsvToRgb(hue_a, 1.0, 1.0, (LED_RGB*)&dynamic.colour_a);
+      LED_HsvToRgb(hue_b, 1.0, 1.0, (LED_RGB*)&dynamic.colour_b);
     #endif
 
     AUDIO_UpdateParams(&dynamic);

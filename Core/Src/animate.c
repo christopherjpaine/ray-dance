@@ -34,13 +34,12 @@ void ANIMATE_Init(ANIMATE_Instance* instance) {
     /* Set dynamics to their defaults */
     instance->dynamic.mode = ANIMATE_MODE_STATIC;
     instance->dynamic.speed = 0.0f;
-    #if CONFIG_DMX_COLOUR_RGB == 1
-        instance->dynamic.colour.red = 0xF6;
-        instance->dynamic.colour.green = 0x26;
-        instance->dynamic.colour.blue = 0x81;
-    #else
-        instance->dynamic.hue = 0.0f;
-    #endif
+    instance->dynamic.colour_a.red = 0xF6;
+    instance->dynamic.colour_a.green = 0x26;
+    instance->dynamic.colour_a.blue = 0x81;
+    instance->dynamic.colour_b.red = 0xF0;;
+    instance->dynamic.colour_b.green = 0xF0;
+    instance->dynamic.colour_b.blue = 0xFF;
 
     /* Configure the initial state, both internal params and those driven
      * by the dynamic parameters. */
@@ -125,24 +124,11 @@ void ANIMATE_UpdateGlobalDynamics(ANIMATE_Instance* instance, ANIMATE_GlobalDyna
     /* Use speed to calculate offset increment. */
     instance->state.offset_increment = animate_MAXIMUM_OFFSET_INCREMENT * dynamics->speed;
 
-    /* Set the colour of all the groups using the current colour input. */
-    LED_RGB rgb;
-    #if CONFIG_DMX_COLOUR_RGB == 1
-        rgb.r = dynamics->colour.red;
-        rgb.g = dynamics->colour.green;
-        rgb.b = dynamics->colour.blue;
-    #else 
-        LED_HsvToRgb(dynamics->hue, 1.0, 1.0, &rgb);
-    #endif
-
     #if 1
-        ANIMATE_Colour rgb_end = {
-            .red = 0xF6,
-            .green = 0x26,
-            .blue = 0x81,
-        };
-        GradientColouredGroups(instance, &dynamics->colour, &rgb_end);
+        /* Apply symmetric colour gradient to the groups */
+        GradientColouredGroups(instance, &dynamics->colour_a, &dynamics->colour_b);
     #else
+        /* Set the colour of all the groups using the current colour input. */
         for (uint32_t i = 0; i < ANIMATE_NUM_GROUPS; ++i) {
             // Set the RGB color and magnitude for each group
             instance->groups[i].dynamic.colour.red = rgb.r;
@@ -175,13 +161,13 @@ static void GradientColouredGroups (ANIMATE_Instance* instance, ANIMATE_Colour* 
     /* Interpolate the first half going from start to end... */
     uint32_t halfway = (ANIMATE_NUM_GROUPS+1)/2;
     for (uint32_t i = 0; i < halfway; i++) {
-        float ratio = i/ANIMATE_NUM_GROUPS;
+        float ratio = i/halfway;
         InterpolateRGBGradient(colour_start, colour_end, &instance->groups[i].dynamic.colour, ratio);
     }
 
     /* Then the other half going back so we get a full gradient.*/
     for (uint32_t i = halfway; i < ANIMATE_NUM_GROUPS; i++){
-        float ratio = i/ANIMATE_NUM_GROUPS;
+        float ratio = i/(ANIMATE_NUM_GROUPS-halfway);
         InterpolateRGBGradient(colour_end, colour_start, &instance->groups[i].dynamic.colour, ratio);
     }
 

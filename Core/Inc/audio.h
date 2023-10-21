@@ -30,6 +30,9 @@ extern UART_HandleTypeDef AUDIO_DEBUG_UART;
 #define AUDIO_CORE_CLOCK_Hz SystemCoreClock
 extern uint32_t SystemCoreClock;
 
+/* Mock the Band Mag Results - For when yzu don't have an audio source. */
+#define AUDIO_MOCK_BAND_MAGS    0
+
 /* == TYPES ================================================================ */
 
 typedef struct AUDIO_DynamicParams_s {
@@ -38,13 +41,8 @@ typedef struct AUDIO_DynamicParams_s {
     float contrast; // +/-1.0f - currently unused.
     float smoothing_factor; // 0.0 to 1.0f
     float animation_speed; // -1.0 to 1.0
-    #if CONFIG_DMX_COLOUR_RGB == 1
-        uint8_t red;
-        uint8_t green;
-        uint8_t blue;
-    #else
-        float hue;  // 0.0 to 360.0f
-    #endif
+    CONFIG_Rgb colour_a;
+    CONFIG_Rgb colour_b;
 }AUDIO_DynamicParams;
 
 /* == INTERFACE FUNCTIONS ================================================== */

@@ -15,11 +15,11 @@ extern UART_HandleTypeDef DMX_DEBUG_UART;
 
 /* == TYPES ================================================================ */
 
-typedef struct DMX_DataRGB_s {
+typedef struct DMX_Rgb_s {
     uint8_t red;
     uint8_t green;
     uint8_t blue;
-}DMX_DataRGB;
+}DMX_Rgb;
 
 typedef struct DMX_DataAlgo_s{
     uint8_t gain;
@@ -28,11 +28,11 @@ typedef struct DMX_DataAlgo_s{
     uint8_t animation_speed;
 #if DMX_ENABLE_RGB_COLOUR == 1
     uint8_t reserved[2];
-    uint8_t red;
-    uint8_t green;
-    uint8_t blue;
+    DMX_Rgb colour_a;
+    DMX_Rgb colour_b;
 #else
-    uint8_t hue;
+    uint8_t hue_a;
+    uint8_t hue_b;
 #endif
 }DMX_DataAlgo;
 

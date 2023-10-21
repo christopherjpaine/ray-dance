@@ -172,13 +172,12 @@ void AUDIO_UpdateParams(AUDIO_DynamicParams* dynamic) {
 
     /* Convert Audio Dynamics into ANIMATE dynamics */
     audio_anim_params_pending.speed = dynamic->animation_speed;
-    #if CONFIG_DMX_COLOUR_RGB
-        audio_anim_params_pending.colour.red = dynamic->red;
-        audio_anim_params_pending.colour.green = dynamic->green;
-        audio_anim_params_pending.colour.blue = dynamic->blue;
-    #else
-        audio_anim_params_pending.hue = dynamic->hue;
-    #endif
+    audio_anim_params_pending.colour_a.red = dynamic->colour_a.red;
+    audio_anim_params_pending.colour_a.green = dynamic->colour_a.green;
+    audio_anim_params_pending.colour_a.blue = dynamic->colour_a.blue;
+    audio_anim_params_pending.colour_b.red = dynamic->colour_b.red;
+    audio_anim_params_pending.colour_b.green = dynamic->colour_b.green;
+    audio_anim_params_pending.colour_b.blue = dynamic->colour_b.blue;
 
     /* Check the queue is ready for events.  */
     if (!audio_queue_handle) {
@@ -413,6 +412,13 @@ static void audio_Algorithm (int16_t *audio_lr) {
     	
     // }
     // LED_Sync();
+
+    #if AUDIO_MOCK_BAND_MAGS == 1
+        for (int i = 0; i < AUDIO_NUM_FREQ_BANDS; i++){
+            float x = (float)i;
+            band_mags[i] = x/(float)AUDIO_NUM_FREQ_BANDS;
+        }
+    #endif
     /* Update Animation instance with latest magnitudes */
     ANIMATE_UpdateMagnitudes(&audio_animate_instance, band_mags);
     ANIMATE_Run(&audio_animate_instance);
