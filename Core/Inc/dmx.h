@@ -1,5 +1,7 @@
 /* == INCLUDES ============================================================= */
 
+#include "config.h"
+
 #include "stm32f7xx_hal.h"
 
 /* == CONFIGURATION ======================================================== */
@@ -8,6 +10,8 @@
 #if defined DMX_DEBUG_UART
 extern UART_HandleTypeDef DMX_DEBUG_UART;
 #endif
+
+#define DMX_ENABLE_RGB_COLOUR       CONFIG_DMX_COLOUR_RGB
 
 /* == TYPES ================================================================ */
 
@@ -22,7 +26,14 @@ typedef struct DMX_DataAlgo_s{
     uint8_t band_compensation;
     uint8_t smoothing;
     uint8_t animation_speed;
+#if DMX_ENABLE_RGB_COLOUR == 1
+    uint8_t reserved[2];
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
+#else
     uint8_t hue;
+#endif
 }DMX_DataAlgo;
 
 /* Representation of the dmx data that can be directly typecast onto the 

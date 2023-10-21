@@ -601,7 +601,13 @@ static void raydance_dmx(DMX_Data* data) {
     dynamic.contrast = 0.0; // currently unused and unmapped.
     dynamic.smoothing_factor = DMX_LinMap(data->smoothing, 0.5, 1.0);
     dynamic.animation_speed = DMX_SymmetricExpMap(data->animation_speed, 6.0f, 1.0f);
-    dynamic.hue = DMX_LinMap(data->hue, 0.0f, 360.0f);
+    #if DMX_ENABLE_RGB_COLOUR == 1
+      dynamic.red = data->red;
+      dynamic.green = data->green;
+      dynamic.blue = data->blue;
+    #else
+      dynamic.hue = DMX_LinMap(data->hue, 0.0f, 360.0f);
+    #endif
 
     AUDIO_UpdateParams(&dynamic);
 }

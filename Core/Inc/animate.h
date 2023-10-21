@@ -1,5 +1,7 @@
 /* == INCLUDES ============================================================= */
 
+#include "config.h"
+
 #include "stm32f7xx_hal.h"
 
 #include "stdint.h"
@@ -46,7 +48,11 @@ typedef struct ANIMATE_Group_s{
 typedef struct ANIMATE_GlobalDynamics_s {
     ANIMATE_Mode mode;
     float speed; // -1.0 to 1.0
-    float hue;  // 0.0 to 360.0
+    #if CONFIG_DMX_COLOUR_RGB == 1
+        ANIMATE_Colour colour;
+    #else
+        float hue;  // 0.0 to 360.0f
+    #endif
 }ANIMATE_GlobalDynamics;
 
 typedef struct ANIMATE_GlobalState_s {
